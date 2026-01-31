@@ -1,12 +1,13 @@
 //
-//  Summary.swift
+//  BookSummary.swift
 //  BookCompanion
 //
 //  Created by Shree on 18/01/2026.
 //
 import Foundation
 
-struct Summary:Identifiable {
+struct BookSummary:Identifiable {
+//struct BookSummary_DO_NOT_USE: Identifiable {
 let id: UUID
 let bookId: UUID
 let progressId: UUID

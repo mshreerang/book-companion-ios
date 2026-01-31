@@ -13,7 +13,9 @@ struct SummaryView: View {
     let language: Language
     let chapter: Int
 
-    @ObservedObject private var viewModel = SummaryViewModel()
+    @StateObject private var viewModel =
+        SummaryViewModel(generator: MockSummaryGenerator())
+
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -57,4 +59,3 @@ struct SummaryView: View {
         }
     }
 }
-

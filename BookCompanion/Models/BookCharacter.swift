@@ -7,12 +7,12 @@
 import Foundation
 
 struct BookCharacter:Identifiable {
-let id:UUID
-let bookId:UUID
-let progressId:UUID
-let name:String
-let description:String
-let relationships:String?
-let language:Language
-let generatedAt:Date
+let id: UUID
+let bookId: UUID
+let progressId: UUID
+let name: String
+let description: String
+let relationships: String?
+let language: Language
+let generatedAt: Date
 }

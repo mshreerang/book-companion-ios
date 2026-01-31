@@ -12,9 +12,9 @@ struct AIService {
 static func generateSummary(
 book:Book,
 chapter:Int
-    )async throws ->Summary {
+    )async throws ->BookSummary {
 // Stubbed for now
-return Summary(
+return BookSummary(
             id:UUID(),
             bookId: book.id,
             progressId:UUID(),

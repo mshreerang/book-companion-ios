@@ -3,24 +3,28 @@ import Combine
 
 @MainActor
 final class SummaryViewModel: ObservableObject {
+
     @Published var isLoading = false
-    @Published var summary: Summary?
+    @Published var summary: BookSummary?
     @Published var characters: [BookCharacter] = []
+
+    private let generator: SummaryGenerating
+
+    init(generator: SummaryGenerating) {
+        self.generator = generator
+    }
 
     func generate(book: Book, chapter: Int) async {
         isLoading = true
+        defer { isLoading = false }
 
-        // TODO: Replace with real AI call
-        summary = Summary(
-            id: UUID(),
-            bookId: book.id,
-            progressId: UUID(),
-            content: "This is a placeholder summary up to chapter \(chapter).",
-            language: book.language,
-            generatedAt: Date()
-        )
-
-        characters = []
-        isLoading = false
+        do {
+            summary = try await generator.generateSummary(book: book, chapter: chapter)
+            characters = try await generator.generateCharacters(book: book, chapter: chapter)
+        } catch {
+            summary = nil
+            characters = []
+        }
     }
 }
+
