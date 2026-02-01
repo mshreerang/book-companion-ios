@@ -9,12 +9,18 @@ import SwiftUI
 
 @main
 struct BookCompanionApp: App {
+
+    private let container = AppContainer()
+
     var body: some Scene {
         WindowGroup {
             NavigationStack {
-                BookSearchView()
+                BookSearchView(
+                    viewModel: container.makeBookSearchViewModel(),
+                    makeProgressViewModel: container.makeProgressInputViewModel,
+                    makeSummaryViewModel: container.makeSummaryViewModel
+                )
             }
         }
     }
 }
-

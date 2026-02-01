@@ -1,12 +1,12 @@
 //
-//  SummaryGenerating.swift
+//  SummaryGenerator.swift
 //  BookCompanion
 //
 //  Created by Shree on 31/01/2026.
 //
 import Foundation
 
-protocol SummaryGenerating {
+protocol SummaryGenerator {
     func generateSummary(
         book: Book,
         chapter: Int

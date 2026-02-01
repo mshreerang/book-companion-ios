@@ -6,10 +6,11 @@
 //
 import Foundation
 
-struct BookSummary:Identifiable {
+struct BookSummary:Identifiable, Codable {
 //struct BookSummary_DO_NOT_USE: Identifiable {
 let id: UUID
 let bookId: UUID
+let chapter: Int
 let progressId: UUID
 let content: String
 let language: Language

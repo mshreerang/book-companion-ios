@@ -2,79 +2,65 @@ import SwiftUI
 
 struct ProgressInputView: View {
 
-    let book: Book
+    @StateObject private var viewModel: ProgressInputViewModel
+    private let makeSummaryViewModel: (Book) -> SummaryViewModel
 
-    @State private var hasLoadedInitialState = false
-    @State private var selectedLanguage: Language
-    @State private var selectedChapter: Int = 1
-
-    private let progressStore = ProgressStore.shared
-
-    init(book: Book) {
-        self.book = book
-
-        if let saved = ProgressStore.shared.load(bookId: book.id) {
-            _selectedLanguage = State(initialValue: saved.language)
-            _selectedChapter = State(initialValue: saved.chapter)
-        } else {
-            _selectedLanguage = State(initialValue: book.language)
-            _selectedChapter = State(initialValue: 1)
-        }
+    init(
+        viewModel: ProgressInputViewModel,
+        makeSummaryViewModel: @escaping (Book) -> SummaryViewModel
+    ) {
+        _viewModel = StateObject(wrappedValue: viewModel)
+        self.makeSummaryViewModel = makeSummaryViewModel
     }
 
     var body: some View {
         Form {
-            
+
             // Book header
             Section {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(book.title)
+                    Text(viewModel.book.title)
                         .font(.headline)
-                    Text(book.author)
+                    Text(viewModel.book.author)
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                 }
             }
-            
+
             // Language selection
             Section(header: Text("Language")) {
-                Picker("Language", selection: $selectedLanguage) {
+                Picker("Language", selection: $viewModel.selectedLanguage) {
                     ForEach(Language.allCases) { language in
                         Text(language.displayName).tag(language)
                     }
                 }
                 .pickerStyle(.segmented)
-                .onChange(of: selectedLanguage) {
-                    guard hasLoadedInitialState else { return }
-                    
-                    saveProgress()
+                .onChange(of: viewModel.selectedLanguage) {
+                    viewModel.updateLanguage(viewModel.selectedLanguage)
                 }
             }
-            
+
             // Chapter progress
             Section(header: Text("Progress")) {
                 Stepper(
-                    value: $selectedChapter,
-                    in: 1...100,
-                    step: 1
+                    value: $viewModel.selectedChapter,
+                    in: 1...100
                 ) {
-                    Text("Last completed chapter: \(selectedChapter)")
+                    Text("Last completed chapter: \(viewModel.selectedChapter)")
                 }
-                .onChange(of: selectedChapter) {
-                    guard hasLoadedInitialState else { return }
-                    
-                    saveProgress()
+                .onChange(of: viewModel.selectedChapter) {
+                    viewModel.updateChapter(viewModel.selectedChapter)
                 }
             }
-            
+
             // Action
             Section {
                 NavigationLink {
                     SummaryView(
-                        book: book,
-                        language: selectedLanguage,
-                        chapter: selectedChapter
+                        viewModel: makeSummaryViewModel(viewModel.book),
+                        chapter: viewModel.selectedChapter
                     )
+                    .id(viewModel.selectedChapter)
                 } label: {
                     Text("Summarise so far")
                         .fontWeight(.semibold)
@@ -82,23 +68,8 @@ struct ProgressInputView: View {
             }
         }
         .navigationTitle("Book Details")
-        .onAppear {
-            hasLoadedInitialState = true
-        }
         .onDisappear {
-            saveProgress()
+            viewModel.saveOnExit()
         }
-    }
-    private func saveProgress() {
-        let progress = ReadingProgress(
-            id: UUID(),
-            bookId: book.id,
-            chapter: selectedChapter,
-            language: selectedLanguage,
-            updatedAt: Date()
-        )
-
-        progressStore.save(progress)
     }
 }
-

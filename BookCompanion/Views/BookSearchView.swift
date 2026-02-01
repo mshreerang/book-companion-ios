@@ -2,10 +2,21 @@ import SwiftUI
 import Combine
 
 struct BookSearchView: View {
-    @StateObject private var viewModel = BookSearchViewModel()
-   // @ObservedObject private var viewModel = BookSearchViewModel()
-    
-    
+
+    @StateObject private var viewModel: BookSearchViewModel
+    private let makeProgressViewModel: (Book) -> ProgressInputViewModel
+    private let makeSummaryViewModel: (Book) -> SummaryViewModel
+
+    init(
+        viewModel: BookSearchViewModel,
+        makeProgressViewModel: @escaping (Book) -> ProgressInputViewModel,
+        makeSummaryViewModel: @escaping (Book) -> SummaryViewModel
+    ) {
+        _viewModel = StateObject(wrappedValue: viewModel)
+        self.makeProgressViewModel = makeProgressViewModel
+        self.makeSummaryViewModel = makeSummaryViewModel
+    }
+
     private var filteredBooks: [Book] {
         guard !viewModel.searchText.isEmpty else {
             return viewModel.results
@@ -21,7 +32,10 @@ struct BookSearchView: View {
         List {
             ForEach(filteredBooks) { book in
                 NavigationLink {
-                    ProgressInputView(book: book)
+                    ProgressInputView(
+                        viewModel: makeProgressViewModel(book),
+                        makeSummaryViewModel: makeSummaryViewModel
+                    )
                 } label: {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(book.title)
@@ -42,3 +56,4 @@ struct BookSearchView: View {
         )
     }
 }
+

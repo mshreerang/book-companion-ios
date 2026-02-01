@@ -6,7 +6,7 @@
 //
 import Foundation
 
-struct MockSummaryGenerator: SummaryGenerating {
+final class MockSummaryGenerator: SummaryGenerator {
 
     func generateSummary(
         book: Book,
@@ -16,11 +16,12 @@ struct MockSummaryGenerator: SummaryGenerating {
         BookSummary(
             id: UUID(),
             bookId: book.id,
+            chapter: chapter,
             progressId: UUID(),
             content: """
-            Up to chapter \(chapter), the story establishes the central themes and introduces the main characters.
-
-            The narrative explores memory, identity, and relationships, setting the stage for deeper conflicts later in the book.
+            Summary of "\(book.title)" 
+            Safe up to chapter \(chapter).
+            (Generated at \(Date()))
             """,
             language: book.language,
             generatedAt: Date()
@@ -31,41 +32,6 @@ struct MockSummaryGenerator: SummaryGenerating {
         book: Book,
         chapter: Int
     ) async throws -> [BookCharacter] {
-
-        let progressId = UUID()
-
-        return [
-            BookCharacter(
-                id: UUID(),
-                bookId: book.id,
-                progressId: progressId,
-                name: "Ila",
-                description: "A free-spirited woman whose life choices challenge traditional expectations.",
-                relationships: "Connected to the narrator through childhood memories.",
-                language: book.language,
-                generatedAt: Date()
-            ),
-            BookCharacter(
-                id: UUID(),
-                bookId: book.id,
-                progressId: progressId,
-                name: "Tridib",
-                description: "An intellectual influence who shapes the narrator’s imagination and worldview.",
-                relationships: "Cousin and mentor figure.",
-                language: book.language,
-                generatedAt: Date()
-            ),
-            BookCharacter(
-                id: UUID(),
-                bookId: book.id,
-                progressId: progressId,
-                name: "Tha'mma",
-                description: "A strong-willed grandmother deeply shaped by ideas of nationhood and family honor.",
-                relationships: "Grandmother of the narrator.",
-                language: book.language,
-                generatedAt: Date()
-            )
-        ]
+        []
     }
 }
-
