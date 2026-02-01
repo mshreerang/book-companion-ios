@@ -24,7 +24,7 @@ struct ProgressInputView: View {
 
     var body: some View {
         Form {
-
+            
             // Book header
             Section {
                 VStack(alignment: .leading, spacing: 4) {
@@ -35,7 +35,7 @@ struct ProgressInputView: View {
                         .foregroundColor(.secondary)
                 }
             }
-
+            
             // Language selection
             Section(header: Text("Language")) {
                 Picker("Language", selection: $selectedLanguage) {
@@ -46,11 +46,11 @@ struct ProgressInputView: View {
                 .pickerStyle(.segmented)
                 .onChange(of: selectedLanguage) {
                     guard hasLoadedInitialState else { return }
-
+                    
                     saveProgress()
                 }
             }
-
+            
             // Chapter progress
             Section(header: Text("Progress")) {
                 Stepper(
@@ -62,11 +62,11 @@ struct ProgressInputView: View {
                 }
                 .onChange(of: selectedChapter) {
                     guard hasLoadedInitialState else { return }
-
+                    
                     saveProgress()
                 }
             }
-
+            
             // Action
             Section {
                 NavigationLink {
@@ -85,8 +85,10 @@ struct ProgressInputView: View {
         .onAppear {
             hasLoadedInitialState = true
         }
+        .onDisappear {
+            saveProgress()
+        }
     }
-
     private func saveProgress() {
         let progress = ReadingProgress(
             id: UUID(),
