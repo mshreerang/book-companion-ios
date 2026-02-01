@@ -29,9 +29,33 @@
 		F49C0FB12F1D94C000B17BBE /* BookCompanionUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BookCompanionUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		F48AA6582F2EC20500AE716A /* Exceptions for "BookCompanion" folder in "BookCompanion" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				"PROJECT_STATUS.md ",
+			);
+			target = F49C0F992F1D94BE00B17BBE /* BookCompanion */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */
+		F48AA65B2F2EC3CE00AE716A /* Exceptions for "BookCompanion" folder in "Compile Sources" phase from "BookCompanion" target */ = {
+			isa = PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet;
+			buildPhase = F49C0F962F1D94BE00B17BBE /* Sources */;
+			membershipExceptions = (
+				"PROJECT_STATUS.md ",
+			);
+		};
+/* End PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		F49C0F9C2F1D94BE00B17BBE /* BookCompanion */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				F48AA6582F2EC20500AE716A /* Exceptions for "BookCompanion" folder in "BookCompanion" target */,
+				F48AA65B2F2EC3CE00AE716A /* Exceptions for "BookCompanion" folder in "Compile Sources" phase from "BookCompanion" target */,
+			);
 			path = BookCompanion;
 			sourceTree = "<group>";
 		};

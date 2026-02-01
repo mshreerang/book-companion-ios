@@ -1,9 +1,11 @@
 import SwiftUI
+import Combine
 
 struct BookSearchView: View {
-
-    @ObservedObject private var viewModel = BookSearchViewModel()
-
+    @StateObject private var viewModel = BookSearchViewModel()
+   // @ObservedObject private var viewModel = BookSearchViewModel()
+    
+    
     private var filteredBooks: [Book] {
         guard !viewModel.searchText.isEmpty else {
             return viewModel.results

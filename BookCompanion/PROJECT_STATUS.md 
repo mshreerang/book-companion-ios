@@ -1,7 +1,65 @@
-//
-//  Untitled.swift
-//  BookCompanion
-//
-//  Created by Shree on 31/01/2026.
-//
+# BookCompanion – Project Status
+
+## Overview
+BookCompanion is an iOS SwiftUI app that helps readers resume audiobooks or books by
+providing spoiler-safe summaries and character context based on where they last stopped.
+
+The current implementation focuses on a clean MVP architecture with mock data,
+ready for AI integration later.
+
+---
+
+## Current State (Stable – Committed)
+
+- SwiftUI app builds and runs cleanly (no warnings)
+- Navigation flow implemented:
+  - Book search
+  - Progress (chapter + language)
+  - Summary view
+  - Characters view
+- Summary and characters are generated via a protocol-based abstraction
+- Mock data is used for all generation logic
+- Clean concurrency handling using `@MainActor`
+- Dependency injection used for generators
+- All code committed and pushed to GitHub
+
+---
+
+## Architecture Summary
+
+### Key Design Decisions
+- **MVVM architecture**
+- **Protocol-based generation layer** to allow easy swap from mock → AI
+- ViewModels are UI-facing and `@MainActor`
+- Views own their ViewModels using `@StateObject`
+- No backend, no authentication (MVP scope)
+
+---
+
+## Key Files & Responsibilities
+
+### Models
+- `Book.swift`
+- `BookSummary.swift`
+- `BookCharacter.swift`
+- `Language.swift`
+
+### Views
+- `BookSearchView.swift`
+- `ProgressInputView.swift`
+- `SummaryView.swift`
+- `CharactersView.swift`
+
+### ViewModels
+- `BookSearchViewModel.swift`
+- `SummaryViewModel.swift`
+
+### Services
+- `SummaryGenerating.swift` (protocol)
+- `MockSummaryGenerator.swift` (current implementation)
+- `AIService.swift` (future AI-backed implementation)
+
+---
+
+## Summary Generation Flow
 
