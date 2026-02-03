@@ -36,7 +36,7 @@ final class UserDefaultsSummaryRepository: SummaryRepository {
     func saveSummary(_ summary: BookSummary) {
         let key = makeKey(
             bookId: summary.bookId,
-            chapter: summaryChapter(summary),
+            chapter: summary.chapter,
             language: summary.language
         )
 
@@ -57,10 +57,5 @@ final class UserDefaultsSummaryRepository: SummaryRepository {
         "\(keyPrefix)\(bookId.uuidString)_\(chapter)_\(language.rawValue)"
     }
 
-    private func summaryChapter(_ summary: BookSummary) -> Int {
-        // For now, chapter is implicit in content.
-        // Later we can add `chapter` to BookSummary explicitly.
-        return 0
-    }
+    // No helper needed: BookSummary already contains `chapter`.
 }
-

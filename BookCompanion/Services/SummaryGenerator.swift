@@ -9,12 +9,13 @@ import Foundation
 protocol SummaryGenerator {
     func generateSummary(
         book: Book,
-        chapter: Int
+        chapter: Int,
+        language: Language
     ) async throws -> BookSummary
 
     func generateCharacters(
         book: Book,
-        chapter: Int
+        chapter: Int,
+        language: Language
     ) async throws -> [BookCharacter]
 }
-

@@ -10,7 +10,8 @@ final class MockSummaryGenerator: SummaryGenerator {
 
     func generateSummary(
         book: Book,
-        chapter: Int
+        chapter: Int,
+        language: Language
     ) async throws -> BookSummary {
 
         BookSummary(
@@ -21,16 +22,18 @@ final class MockSummaryGenerator: SummaryGenerator {
             content: """
             Summary of "\(book.title)" 
             Safe up to chapter \(chapter).
+            Language: \(language.displayName).
             (Generated at \(Date()))
             """,
-            language: book.language,
+            language: language,
             generatedAt: Date()
         )
     }
 
     func generateCharacters(
         book: Book,
-        chapter: Int
+        chapter: Int,
+        language: Language
     ) async throws -> [BookCharacter] {
         []
     }

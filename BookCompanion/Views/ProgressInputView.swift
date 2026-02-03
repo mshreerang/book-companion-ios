@@ -3,11 +3,11 @@ import SwiftUI
 struct ProgressInputView: View {
 
     @StateObject private var viewModel: ProgressInputViewModel
-    private let makeSummaryViewModel: (Book) -> SummaryViewModel
+    private let makeSummaryViewModel: (Book, Language) -> SummaryViewModel
 
     init(
         viewModel: ProgressInputViewModel,
-        makeSummaryViewModel: @escaping (Book) -> SummaryViewModel
+        makeSummaryViewModel: @escaping (Book, Language) -> SummaryViewModel
     ) {
         _viewModel = StateObject(wrappedValue: viewModel)
         self.makeSummaryViewModel = makeSummaryViewModel
@@ -57,7 +57,10 @@ struct ProgressInputView: View {
             Section {
                 NavigationLink {
                     SummaryView(
-                        viewModel: makeSummaryViewModel(viewModel.book),
+                        viewModel: makeSummaryViewModel(
+                            viewModel.book,
+                            viewModel.selectedLanguage
+                        ),
                         chapter: viewModel.selectedChapter
                     )
                     .id(viewModel.selectedChapter)

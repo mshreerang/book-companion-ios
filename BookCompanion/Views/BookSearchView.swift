@@ -5,12 +5,12 @@ struct BookSearchView: View {
 
     @StateObject private var viewModel: BookSearchViewModel
     private let makeProgressViewModel: (Book) -> ProgressInputViewModel
-    private let makeSummaryViewModel: (Book) -> SummaryViewModel
+    private let makeSummaryViewModel: (Book, Language) -> SummaryViewModel
 
     init(
         viewModel: BookSearchViewModel,
         makeProgressViewModel: @escaping (Book) -> ProgressInputViewModel,
-        makeSummaryViewModel: @escaping (Book) -> SummaryViewModel
+        makeSummaryViewModel: @escaping (Book, Language) -> SummaryViewModel
     ) {
         _viewModel = StateObject(wrappedValue: viewModel)
         self.makeProgressViewModel = makeProgressViewModel
@@ -56,4 +56,3 @@ struct BookSearchView: View {
         )
     }
 }
-

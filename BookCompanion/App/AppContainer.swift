@@ -15,9 +15,10 @@ final class AppContainer {
     private lazy var summaryRepository: SummaryRepository =
         UserDefaultsSummaryRepository()
 
-    func makeSummaryViewModel(book: Book) -> SummaryViewModel {
+    func makeSummaryViewModel(book: Book, language: Language) -> SummaryViewModel {
         SummaryViewModel(
             book: book,
+            language: language,
             generator: summaryGenerator,
             summaryRepository: summaryRepository
         )

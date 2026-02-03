@@ -10,15 +10,18 @@ final class SummaryViewModel: ObservableObject {
     @Published private(set) var isCached = false
 
     private let book: Book
+    private let language: Language
     private let generator: SummaryGenerator
     private let summaryRepository: SummaryRepository
 
     init(
         book: Book,
+        language: Language,
         generator: SummaryGenerator,
         summaryRepository: SummaryRepository
     ) {
         self.book = book
+        self.language = language
         self.generator = generator
         self.summaryRepository = summaryRepository
     }
@@ -31,7 +34,7 @@ final class SummaryViewModel: ObservableObject {
         if let cached = summaryRepository.loadSummary(
             bookId: book.id,
             chapter: chapter,
-            language: book.language
+            language: language
         ) {
             self.summary = cached
             self.characters = [] // or cached characters later
@@ -47,7 +50,8 @@ final class SummaryViewModel: ObservableObject {
         do {
             let generated = try await generator.generateSummary(
                 book: book,
-                chapter: chapter
+                chapter: chapter,
+                language: language
             )
 
             summaryRepository.saveSummary(generated)
@@ -55,7 +59,8 @@ final class SummaryViewModel: ObservableObject {
             self.isCached = false
             self.characters = try await generator.generateCharacters(
                 book: book,
-                chapter: chapter
+                chapter: chapter,
+                language: language
             )
 
         } catch {
@@ -71,14 +76,16 @@ final class SummaryViewModel: ObservableObject {
         do {
             let generated = try await generator.generateSummary(
                 book: book,
-                chapter: chapter
+                chapter: chapter,
+                language: language
             )
            summaryRepository.saveSummary(generated)
             self.summary = generated
 
             self.characters = try await generator.generateCharacters(
                 book: book,
-                chapter: chapter
+                chapter: chapter,
+                language: language
             )
 
         } catch {
@@ -88,4 +95,3 @@ final class SummaryViewModel: ObservableObject {
     }
 
 }
-
