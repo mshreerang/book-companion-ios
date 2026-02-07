@@ -7,17 +7,18 @@
 import Foundation
 import Combine
 
-
 @MainActor
 final class ProgressInputViewModel: ObservableObject {
 
     @Published var selectedLanguage: Language
     @Published var selectedChapter: Int
+    @Published var selectedLength: SummaryLength = .medium  
 
     let book: Book
 
     private let repository: ProgressRepository
     private var hasLoadedInitialState = false
+    private var currentProgressId: UUID  // ✅ Fixed: Store progress ID
 
     init(
         book: Book,
@@ -29,9 +30,11 @@ final class ProgressInputViewModel: ObservableObject {
         if let saved = repository.loadProgress(for: book.id.uuidString) {
             self.selectedLanguage = saved.language
             self.selectedChapter = saved.chapter
+            self.currentProgressId = saved.id  // ✅ Reuse existing ID
         } else {
             self.selectedLanguage = book.language
             self.selectedChapter = 1
+            self.currentProgressId = UUID()  // ✅ Create once
         }
 
         self.hasLoadedInitialState = true
@@ -46,6 +49,11 @@ final class ProgressInputViewModel: ObservableObject {
         selectedChapter = chapter
         saveIfReady()
     }
+    
+    func updateLength(_ length: SummaryLength) {
+        selectedLength = length
+        // No need to save - length is per-session preference
+    }
 
     func saveOnExit() {
         save()
@@ -58,7 +66,7 @@ final class ProgressInputViewModel: ObservableObject {
 
     private func save() {
         let progress = ReadingProgress(
-            id: UUID(),
+            id: currentProgressId,  // ✅ Fixed: Reuse same ID
             bookId: book.id,
             chapter: selectedChapter,
             language: selectedLanguage,
@@ -68,4 +76,3 @@ final class ProgressInputViewModel: ObservableObject {
         repository.saveProgress(progress)
     }
 }
-

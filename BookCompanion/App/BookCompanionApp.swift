@@ -17,8 +17,11 @@ struct BookCompanionApp: App {
             NavigationStack {
                 BookSearchView(
                     viewModel: container.makeBookSearchViewModel(),
+                    settingsManager: container.settingsManager,
+                    bookManager: container.bookManager,  // ✅ Pass bookManager
                     makeProgressViewModel: container.makeProgressInputViewModel,
-                    makeSummaryViewModel: container.makeSummaryViewModel
+                    makeSummaryViewModel: container.makeSummaryViewModel,
+                    makeCharactersViewModel: container.makeCharactersViewModel
                 )
             }
         }

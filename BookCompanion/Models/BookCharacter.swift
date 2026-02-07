@@ -6,7 +6,7 @@
 //
 import Foundation
 
-struct BookCharacter:Identifiable {
+struct BookCharacter:Identifiable, Codable {
 let id: UUID
 let bookId: UUID
 let progressId: UUID

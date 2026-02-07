@@ -8,18 +8,24 @@
 import Combine
 
 final class BookSearchViewModel: ObservableObject {
-
+    
     @Published var searchText: String = ""
-    @Published private(set) var results: [Book] = []
-
-    private let repository: BookRepository
-
-    init(repository: BookRepository) {
-        self.repository = repository
-        self.results = repository.fetchBooks()
+    
+    private let bookManager: BookManager
+    private var cancellables = Set<AnyCancellable>()
+    
+    var books: [Book] {
+        bookManager.books
     }
-
-    func search() {
-        // v0.1 – no-op (search is client-side for now)
+    
+    init(bookManager: BookManager) {
+        self.bookManager = bookManager
+        
+        // Observe changes to bookManager
+        bookManager.$books
+            .sink { [weak self] _ in
+                self?.objectWillChange.send()
+            }
+            .store(in: &cancellables)
     }
 }

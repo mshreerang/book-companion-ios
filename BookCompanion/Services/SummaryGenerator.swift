@@ -10,7 +10,8 @@ protocol SummaryGenerator {
     func generateSummary(
         book: Book,
         chapter: Int,
-        language: Language
+        language: Language,
+        length: SummaryLength
     ) async throws -> BookSummary
 
     func generateCharacters(

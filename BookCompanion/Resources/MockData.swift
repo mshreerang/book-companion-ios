@@ -7,6 +7,8 @@ enum MockData {
             title: "The Shadow Lines",
             author: "Amitav Ghosh",
             language: .english,
+            totalChapters: 25,
+            coverImageURL: nil,
             createdAt: Date(timeIntervalSince1970: 1_600_000_000),
             
         ),
@@ -15,15 +17,19 @@ enum MockData {
             title: "Midnight's Children",
             author: "Salman Rushdie",
             language: .english,
+            totalChapters: 30,
+            coverImageURL: nil,
             createdAt:Date(timeIntervalSince1970: 1_600_000_000)
         ),
         Book(
-            id: UUID(uuidString: "33333333-3333-3333-3333-333333333333")!,
-            title: "Train to Pakistan",
-            author: "Khushwant Singh",
-            language: .english,
-            createdAt: Date(timeIntervalSince1970: 1_600_000_000)
-        )
+                id: UUID(uuidString: "11111111-1111-1111-1111-111111111111")!,
+                title: "The Shadow Lines",
+                author: "Amitav Ghosh",
+                language: .english,
+                totalChapters: 18,
+                coverImageURL: nil,
+                createdAt: Date(timeIntervalSince1970: 1_600_000_000)
+            )
     ]
 }
 

@@ -21,6 +21,7 @@ struct SummaryView: View {
                 .padding(6)
                 .background(Color.green.opacity(0.15))
                 .cornerRadius(6)
+            
             if viewModel.isCached {
                 Text("Previously generated")
                     .font(.caption2)
@@ -30,6 +31,7 @@ struct SummaryView: View {
                     .foregroundColor(.blue)
                     .cornerRadius(6)
             }
+            
             HStack {
                 Spacer()
 
@@ -50,8 +52,42 @@ struct SummaryView: View {
                 Spacer()
                 ProgressView("Preparing your summary…")
                 Spacer()
+                
+            } else if let error = viewModel.error {
+                Spacer()
+                VStack(spacing: 12) {
+                    Image(systemName: "exclamationmark.triangle")
+                        .font(.largeTitle)
+                        .foregroundColor(.orange)
+                    
+                    Text("Failed to generate summary")
+                        .font(.headline)
+                    
+                    Text(error.localizedDescription)
+                        .font(.body)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                    
+                    // ✅ Add recovery suggestion if available
+                    if let aiError = error as? AIError,
+                       let suggestion = aiError.recoverySuggestion {
+                        Text(suggestion)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal)
+                    }
+                    
+                    Button("Try Again") {
+                        Task {
+                            await viewModel.generate(chapter: chapter)
+                        }
+                    }
+                    .buttonStyle(.borderedProminent)
+                }
+                .padding()
+                Spacer()
             } else if let summary = viewModel.summary {
-
                 ScrollView {
                     Text(summary.content)
                         .font(.body)
@@ -63,11 +99,9 @@ struct SummaryView: View {
                 NavigationLink {
                     CharactersView(
                         characters: viewModel.characters,
-                        chapter: chapter
-                    )
+                        )
                 } label: {
-                    Text("Characters")
-                        .fontWeight(.semibold)
+                    Label("Characters", systemImage: "person.2.fill")
                 }
             }
         }
