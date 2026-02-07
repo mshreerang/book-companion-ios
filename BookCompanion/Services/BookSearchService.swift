@@ -70,29 +70,32 @@ final class BookSearchService {
             return []
         }
         
-        // Detect if query is in non-Latin script
+        // Detect script
         let isNonLatin = query.unicodeScalars.contains { scalar in
             (0x0900...0x097F).contains(scalar.value)
         }
         
-        var components = URLComponents(string: baseURL)!
-        
-        // Build smart search query
+        // Build search query
         let searchQuery: String
         if isNonLatin {
             searchQuery = query
         } else {
-            // Add fiction filter for better novel results
             searchQuery = "\(query)+subject:fiction"
         }
         
-        components.queryItems = [
-            URLQueryItem(name: "q", value: searchQuery),
-            URLQueryItem(name: "maxResults", value: "40"),
-            URLQueryItem(name: "printType", value: "books"),
-            URLQueryItem(name: "orderBy", value: "relevance"),
-            URLQueryItem(name: "langRestrict", value: isNonLatin ? nil : "en")
+        // Call YOUR backend instead of Google directly
+        var components = URLComponents(string: "\(Config.apiEndpoint)/api/search-books")!
+        
+        var queryItems = [
+            URLQueryItem(name: "query", value: searchQuery),
+            URLQueryItem(name: "maxResults", value: "40")
         ]
+        
+        if !isNonLatin {
+            queryItems.append(URLQueryItem(name: "langRestrict", value: "en"))
+        }
+        
+        components.queryItems = queryItems
         
         guard let url = components.url else {
             throw BookSearchError.invalidURL
@@ -100,59 +103,79 @@ final class BookSearchService {
         
         print("🔍 Searching: \(query)")
         
-        let (data, response) = try await session.data(from: url)
+        var request = URLRequest(url: url)
+        request.addValue(Config.appSecret, forHTTPHeaderField: "X-App-Secret")
+   
         
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw BookSearchError.requestFailed
-        }
-        
-        print("📡 Response status: \(httpResponse.statusCode)")
-        
-        guard httpResponse.statusCode == 200 else {
-            throw BookSearchError.requestFailed
-        }
-        
-        let decoder = JSONDecoder()
-        let googleResponse = try decoder.decode(GoogleBooksResponse.self, from: data)
-        
-        guard let items = googleResponse.items, !items.isEmpty else {
-            print("❌ No results from API")
-            throw BookSearchError.noResults
-        }
-        
-        print("✅ Found \(items.count) raw results")
-        
-        // Convert results
-        let results = items.compactMap { item -> BookSearchResult? in
-            guard !item.volumeInfo.title.isEmpty,
-                  let authors = item.volumeInfo.authors,
-                  !authors.isEmpty else {
-                return nil
+        // Retry logic
+        var lastError: Error?
+        for attempt in 1...2 {
+            do {
+                let (data, response) = try await session.data(for: request)
+                
+                guard let httpResponse = response as? HTTPURLResponse else {
+                    throw BookSearchError.requestFailed
+                }
+                
+                print("📡 Response status: \(httpResponse.statusCode)")
+                
+                guard httpResponse.statusCode == 200 else {
+                    if attempt < 2 {
+                        try? await Task.sleep(nanoseconds: 1_000_000_000)
+                        continue
+                    }
+                    throw BookSearchError.requestFailed
+                }
+                
+                // Parse Google Books response
+                let decoder = JSONDecoder()
+                let googleResponse = try decoder.decode(GoogleBooksResponse.self, from: data)
+                
+                guard let items = googleResponse.items, !items.isEmpty else {
+                    throw BookSearchError.noResults
+                }
+                
+                print("✅ Found \(items.count) results")
+                
+                // Convert to our model
+                let results = items.compactMap { item -> BookSearchResult? in
+                    guard !item.volumeInfo.title.isEmpty,
+                          let authors = item.volumeInfo.authors,
+                          !authors.isEmpty else {
+                        return nil
+                    }
+                    
+                    let thumbnail = item.volumeInfo.imageLinks?.thumbnail?
+                        .replacingOccurrences(of: "http://", with: "https://")
+                    
+                    return BookSearchResult(
+                        id: item.id,
+                        title: item.volumeInfo.title,
+                        authors: authors,
+                        pageCount: item.volumeInfo.pageCount,
+                        language: item.volumeInfo.language,
+                        thumbnailURL: thumbnail,
+                        categories: item.volumeInfo.categories
+                    )
+                }
+                
+                if isNonLatin {
+                    return Array(results.prefix(20))
+                }
+                
+                return filterAndSortResults(results, query: query)
+                
+            } catch {
+                lastError = error
+                if attempt < 2 {
+                    try? await Task.sleep(nanoseconds: 1_000_000_000)
+                }
             }
-            
-            let thumbnail = item.volumeInfo.imageLinks?.thumbnail?
-                .replacingOccurrences(of: "http://", with: "https://")
-            
-            return BookSearchResult(
-                id: item.id,
-                title: item.volumeInfo.title,
-                authors: authors,
-                pageCount: item.volumeInfo.pageCount,
-                language: item.volumeInfo.language,
-                thumbnailURL: thumbnail,
-                categories: item.volumeInfo.categories
-            )
         }
         
-        print("✅ Converted to \(results.count) valid results")
-        
-        if isNonLatin {
-            return Array(results.prefix(20))
-        }
-        
-        return filterAndSortResults(results, query: query)
+        throw lastError ?? BookSearchError.requestFailed
     }
-    
+       
     private func filterAndSortResults(_ results: [BookSearchResult], query: String) -> [BookSearchResult] {
         let lowercaseQuery = query.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
         
