@@ -3,6 +3,7 @@ import SwiftUI
 struct SummaryView: View {
 
     @StateObject private var viewModel: SummaryViewModel
+    @StateObject private var ttsManager = TextToSpeechManager.shared
     let chapter: Int
 
     init(
@@ -95,18 +96,40 @@ struct SummaryView: View {
                 }
 
                 Spacer()
-
-                NavigationLink {
-                    CharactersView(
-                        characters: viewModel.characters,
-                        )
-                } label: {
-                    Label("Characters", systemImage: "person.2.fill")
-                }
-            }
+              }
         }
         .padding()
         .navigationTitle("Story So Far")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                HStack(spacing: 16) {
+                    // Listen button
+                    Button {
+                        if ttsManager.isSpeaking {
+                            ttsManager.stop()
+                        } else {
+                            if let summary = viewModel.summary {
+                                ttsManager.speak(text: summary.content, language: summary.language)
+                            }
+                        }
+                    } label: {
+                        Label(
+                            ttsManager.isSpeaking ? "Stop" : "Listen",
+                            systemImage: ttsManager.isSpeaking ? "stop.fill" : "speaker.wave.2.fill"
+                        )
+                    }
+                    .disabled(viewModel.summary == nil)
+                    
+                    // Characters button
+                    NavigationLink {
+                        CharactersView(characters: viewModel.characters)
+                    } label: {
+                        Label("Characters", systemImage: "person.2.fill")
+                    }
+                }
+            }
+        }
         .task(id: chapter) {
             await viewModel.generate(chapter: chapter)
         }

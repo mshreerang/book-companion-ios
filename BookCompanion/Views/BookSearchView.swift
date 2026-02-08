@@ -5,8 +5,9 @@ struct BookSearchView: View {
 
     @StateObject private var viewModel: BookSearchViewModel
     @ObservedObject var settingsManager: SettingsManager
-    @ObservedObject var bookManager: BookManager  // ✅ Add this
-    @State private var showingAddBook = false  // ✅ Add this
+    @ObservedObject var bookManager: BookManager
+    @State private var showingAddBook = false
+    @State private var showingSettings = false
     
     private let makeProgressViewModel: (Book) -> ProgressInputViewModel
     private let makeSummaryViewModel: (Book, Language, SummaryLength) -> SummaryViewModel
@@ -144,15 +145,17 @@ struct BookSearchView: View {
             }
             
             ToolbarItem(placement: .navigationBarTrailing) {
-                NavigationLink {
-                    SettingsView(settingsManager: settingsManager)
+                Button {
+                    showingSettings = true
                 } label: {
                     Image(systemName: "gear")
                 }
-            }
-        }
+            }        }
         .sheet(isPresented: $showingAddBook) {
             SearchBooksView(bookManager: bookManager)
+        }
+        .sheet(isPresented: $showingSettings) {
+            SettingsView(settingsManager: settingsManager)
         }
         .overlay(alignment: .bottomTrailing) {
             // Mode badge

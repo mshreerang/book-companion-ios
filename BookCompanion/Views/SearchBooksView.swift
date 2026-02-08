@@ -266,12 +266,6 @@ struct ConfirmBookView: View {
                     .padding(.vertical, 8)
                 }
                 
-                Section("Details") {
-                    if let pages = searchResult.pageCount {
-                        LabeledContent("Pages", value: "\(pages)")
-                    }
-                }
-                
                 Section {
                     Picker("Language", selection: $selectedLanguage) {
                         ForEach(Language.allCases) { language in
@@ -279,11 +273,23 @@ struct ConfirmBookView: View {
                         }
                     }
                     
-                    Stepper("Total Chapters: \(totalChapters)", value: $totalChapters, in: 1...500)
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Total Chapters")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                        
+                        Stepper("\(totalChapters) chapters", value: $totalChapters, in: 1...500)
+                            .font(.headline)
+                    }
+                    .padding(.vertical, 4)
                 } header: {
-                    Text("Customize")
+                    Text("Book Details")
                 } footer: {
-                    Text("We estimated \(searchResult.estimatedChapters) chapters based on page count. Adjust if needed.")
+                    if let pages = searchResult.pageCount {
+                        Text("Based on \(pages) pages, we suggest \(searchResult.estimatedChapters) chapters. Please enter the actual chapter count from your edition.")
+                    } else {
+                        Text("Enter the total number of chapters in your copy of the book.")
+                    }
                 }
                 
                 Section {

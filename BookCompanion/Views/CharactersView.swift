@@ -36,32 +36,38 @@ struct CharactersView: View {
             } else {
                 List {
                     ForEach(filteredCharacters) { character in
-                        VStack(alignment: .leading, spacing: 8) {
-                            // Character name
-                            Text(character.name)
-                                .font(.headline)
+                        HStack(alignment: .top, spacing: 16) {
+                            // Character Avatar
+                            CharacterAvatar(name: character.name, size: 60)
                             
-                            // Description
-                            Text(character.description)
-                                .font(.body)
-                                .foregroundColor(.secondary)
-                            
-                            // Relationships (if any)
-                            if let relationships = character.relationships,
-                               !relationships.isEmpty,
-                               relationships.lowercased() != "null" {
-                                HStack(spacing: 4) {
-                                    Image(systemName: "person.2")
-                                        .font(.caption)
-                                        .foregroundColor(.blue)
-                                    Text(relationships)
-                                        .font(.caption)
-                                        .foregroundColor(.blue)
+                            // Character Info
+                            VStack(alignment: .leading, spacing: 8) {
+                                // Name
+                                Text(character.name)
+                                    .font(.headline)
+                                
+                                // Description
+                                Text(character.description)
+                                    .font(.body)
+                                    .foregroundColor(.secondary)
+                                
+                                // Relationships (if any)
+                                if let relationships = character.relationships,
+                                   !relationships.isEmpty,
+                                   relationships.lowercased() != "null" {
+                                    HStack(spacing: 4) {
+                                        Image(systemName: "person.2")
+                                            .font(.caption)
+                                            .foregroundColor(.blue)
+                                        Text(relationships)
+                                            .font(.caption)
+                                            .foregroundColor(.blue)
+                                    }
+                                    .padding(.top, 4)
                                 }
-                                .padding(.top, 4)
                             }
                         }
-                        .padding(.vertical, 4)
+                        .padding(.vertical, 8)
                     }
                 }
                 .listStyle(.plain)
@@ -93,6 +99,16 @@ struct CharactersView: View {
                 name: "Jay Gatsby",
                 description: "Mysterious wealthy neighbor who throws lavish parties",
                 relationships: "In love with Daisy",
+                language: .english,
+                generatedAt: Date()
+            ),
+            BookCharacter(
+                id: UUID(),
+                bookId: UUID(),
+                progressId: UUID(),
+                name: "Daisy Buchanan",
+                description: "Nick's cousin, married to Tom",
+                relationships: "Wife of Tom Buchanan",
                 language: .english,
                 generatedAt: Date()
             )

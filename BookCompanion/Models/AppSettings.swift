@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import Combine
 
 struct AppSettings: Codable {
     var isAIEnabled: Bool
