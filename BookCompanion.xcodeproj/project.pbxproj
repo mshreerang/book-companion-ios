@@ -33,6 +33,7 @@
 		F48AA6582F2EC20500AE716A /* Exceptions for "BookCompanion" folder in "BookCompanion" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
+				Info.plist,
 				"PROJECT_STATUS.md ",
 			);
 			target = F49C0F992F1D94BE00B17BBE /* BookCompanion */;
