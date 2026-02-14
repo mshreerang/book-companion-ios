@@ -65,17 +65,19 @@ struct SettingsView: View {
                 
                 // Legal Section - WITH ICONS AND SHARE
                 Section {
-                    Link(destination: URL(string: "https://mshreerang.github.io/book-companion-ios/privacy-policy.html")!) {
-                        HStack {
-                            Label("Privacy Policy", systemImage: "hand.raised")
-                            Spacer()
-                            Image(systemName: "arrow.up.forward")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
+                    if let url = URL(string: "https://mshreerang.github.io/book-companion-ios/privacy-policy.html") {
+                            Link(destination: url) {
+                                HStack {
+                                    Label("Privacy Policy", systemImage: "hand.raised")
+                                    Spacer()
+                                    Image(systemName: "arrow.up.forward")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+                            }
                         }
-                    }
                     
-                    Link(destination: URL(string: "mailto:shreesanjeevmahale@gmail.com")!) {
+                    Link(destination: URL(string: "mailto:shree.mandlekar@gmail.com")!) {
                         HStack {
                             Label("Support", systemImage: "questionmark.circle")
                             Spacer()
