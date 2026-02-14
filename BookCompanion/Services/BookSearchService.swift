@@ -48,7 +48,7 @@ struct BookSearchResult: Identifiable, Equatable {
 
 final class BookSearchService {
     
-    private let baseURL = "https://bookcompanion-api.vercel.app/api/books/search"
+    private let baseURL = "https://bookcompanion-api.vercel.app/api/search-books"
     private let session: URLSession
     
     init() {
@@ -75,8 +75,8 @@ final class BookSearchService {
         
         print("🔍 Searching: \(query)")
         
-        let request = URLRequest(url: url)
-        
+        var request = URLRequest(url: url)
+        request.setValue(Config.appSecret, forHTTPHeaderField: "X-App-Secret")
         let (data, response) = try await session.data(for: request)
         
         guard let httpResponse = response as? HTTPURLResponse else {

@@ -65,7 +65,7 @@ struct SettingsView: View {
                 
                 // Legal Section - WITH ICONS AND SHARE
                 Section {
-                    Link(destination: URL(string: "https://bookcompanion-api.vercel.app/privacy.html")!) {
+                    Link(destination: URL(string: "https://mshreerang.github.io/book-companion-ios/privacy-policy.html")!) {
                         HStack {
                             Label("Privacy Policy", systemImage: "hand.raised")
                             Spacer()

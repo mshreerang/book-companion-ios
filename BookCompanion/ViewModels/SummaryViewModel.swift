@@ -31,7 +31,7 @@ final class SummaryViewModel: ObservableObject {
     }
 
     func generate(chapter: Int) async {
-        isLoading = false
+        isLoading = true
         isCached = false
         error = nil
         
@@ -42,6 +42,7 @@ final class SummaryViewModel: ObservableObject {
             language: language,
             length: length  // ✅ Add length to cache key
         ) {
+            print("✅ Loaded from cache: Chapter \(chapter)")
             self.summary = cachedSummary
             
             // ✅ Load cached characters too
@@ -51,6 +52,7 @@ final class SummaryViewModel: ObservableObject {
                 language: language,
                 length: length  // ✅ Add length to cache key
             ) {
+                print("✅ Loaded characters from cache")
                 self.characters = cachedCharacters
             } else {
                 self.characters = []
@@ -60,7 +62,7 @@ final class SummaryViewModel: ObservableObject {
             self.isLoading = false
             return
         }
-        
+        print("⚠️ No cache found, generating new summary for Chapter \(chapter)") 
         // 2️⃣ Otherwise generate
         isLoading = true
         defer { isLoading = false }

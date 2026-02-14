@@ -32,19 +32,23 @@ final class TextToSpeechManager: NSObject, ObservableObject {
         let utterance = AVSpeechUtterance(string: text)
         
         // Set voice based on language
-        switch language {
-        case .english:
-            utterance.voice = AVSpeechSynthesisVoice(language: "en-US")
-        case .hindi:
-            utterance.voice = AVSpeechSynthesisVoice(language: "hi-IN")
-        case .marathi:
-            utterance.voice = AVSpeechSynthesisVoice(language: "mr-IN")
+            let voiceLanguage: String
+            switch language {
+            case .english:
+                voiceLanguage = "en-US"
+            case .hindi:
+                voiceLanguage = "hi-IN"
+            case .marathi:
+                voiceLanguage = "hi-IN"
         }
-        
+        utterance.voice = AVSpeechSynthesisVoice(language: voiceLanguage)
         // Speech settings
         utterance.rate = 0.5 // Slightly slower for clarity
         utterance.pitchMultiplier = 1.0
         utterance.volume = 1.0
+        
+        // ✅ Add pre-utterance delay for better start
+            utterance.preUtteranceDelay = 0.1
         
         isSpeaking = true
         synthesizer.speak(utterance)

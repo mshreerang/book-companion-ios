@@ -50,10 +50,17 @@ struct SummaryView: View {
             }
 
             if viewModel.isLoading {
-                Spacer()
-                ProgressView("Preparing your summary…")
-                Spacer()
-                
+                VStack {
+                    Spacer()
+                    VStack(spacing: Theme.Spacing.md) {
+                        ProgressView()
+                        Text("Preparing your summary...")
+                            .font(Theme.Typography.body)
+                            .foregroundColor(Theme.Colors.textSecondary)
+                    }
+                    Spacer()
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if let error = viewModel.error {
                 Spacer()
                 VStack(spacing: 12) {

@@ -27,17 +27,17 @@ struct OnboardingView: View {
                 // Page 1: Welcome
                 OnboardingPageView(
                     systemImage: "book.pages.fill",
-                    title: "Welcome to\nBookCompanion",
-                    description: "Never lose your place in a book again. Get instant summaries and character reminders.",
+                    title: "Welcome to BookCompanion",
+                    description: "Your AI reading assistant for complex books\n\nआपका AI पढ़ने का सहायक\n\nतुमचा AI वाचन सहाय्यक",
                     gradientColors: [.blue, .cyan]
                 )
                 .tag(0)
                 
-                // Page 2: How it Works
+                // Page 2: Features
                 OnboardingPageView(
                     systemImage: "sparkles.rectangle.stack.fill",
-                    title: "Choose Your Mode",
-                    description: "Use offline sample data for free, or enable AI for personalized summaries of any book.",
+                    title: "Smart Summaries",
+                    description: "Get spoiler-free recaps and character guides\n\nस्पॉयलर-मुक्त सारांश प्राप्त करें\n\nस्पॉयलर-मुक्त सारांश मिळवा",
                     gradientColors: [.purple, .pink]
                 )
                 .tag(1)
@@ -48,6 +48,7 @@ struct OnboardingView: View {
                 })
                 .tag(2)
             }
+            
             .tabViewStyle(.page(indexDisplayMode: .always))
             .indexViewStyle(.page(backgroundDisplayMode: .always))
         }

@@ -1,5 +1,5 @@
 //
-//  Untitled.swift
+//  Language.swift
 //  BookCompanion
 //
 //  Created by Shree on 18/01/2026.
@@ -20,6 +20,13 @@ enum Language: String, CaseIterable, Identifiable, Codable {
         case .marathi: return "Marathi"
         }
     }
+    
+    // ✅ ADD THIS - TTS Voice Code
+    var voiceCode: String {
+        switch self {
+        case .english: return "en-US"
+        case .hindi: return "hi-IN"
+        case .marathi: return "hi-IN"  // Fallback to Hindi (same Devanagari script)
+        }
+    }
 }
-
-

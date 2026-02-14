@@ -12,6 +12,6 @@ struct AppSettings: Codable {
     var isAIEnabled: Bool
     
     static let `default` = AppSettings(
-        isAIEnabled: false  // Offline by default
+        isAIEnabled: true  // online by default
     )
 }

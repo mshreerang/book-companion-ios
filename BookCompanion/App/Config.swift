@@ -11,15 +11,15 @@ enum Config {
     
     // MARK: - API Configuration
     
-    #if DEBUG
-    // Development
-    static let apiEndpoint = "https://bookcompanion-api.vercel.app"
-    static let appSecret = "ujxlv2MWUY/EyRV+0Rc20eGjca8GqN5V3Q5oEnuedjM="
-    #else
-    // Production
-    static let apiEndpoint = "https://bookcompanion-api.vercel.app"
-    static let appSecret = "ujxlv2MWUY/EyRV+0Rc20eGjca8GqN5V3Q5oEnuedjM="
-    #endif
+#if DEBUG
+// Development
+static let apiEndpoint = "https://bookcompanion-api.vercel.app"
+static let appSecret = "ujxlv2MWUY/EyRV+0Rc20eGjca8GqN5V3Q5oEnuedjM="
+#else
+// Production
+static let apiEndpoint = "https://bookcompanion-api.vercel.app"
+static let appSecret = "ujxlv2MWUY/EyRV+0Rc20eGjca8GqN5V3Q5oEnuedjM="
+#endif
     
     // MARK: - App Information
     
