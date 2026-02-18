@@ -12,7 +12,7 @@ final class ProgressInputViewModel: ObservableObject {
 
     @Published var selectedLanguage: Language
     @Published var selectedChapter: Int
-    @Published var selectedLength: SummaryLength = .medium  
+    @Published var selectedLength: SummaryLength = .short
 
     let book: Book
 

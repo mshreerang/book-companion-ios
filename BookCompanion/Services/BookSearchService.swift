@@ -78,7 +78,10 @@ final class BookSearchService {
         var request = URLRequest(url: url)
         request.setValue(Config.appSecret, forHTTPHeaderField: "X-App-Secret")
         let (data, response) = try await session.data(for: request)
-        
+        // Debug: Print raw response
+        if let jsonString = String(data: data, encoding: .utf8) {
+            print("📦 Raw API Response (first 500 chars): \(String(jsonString.prefix(500)))")
+        }
         guard let httpResponse = response as? HTTPURLResponse else {
             throw BookSearchError.requestFailed
         }

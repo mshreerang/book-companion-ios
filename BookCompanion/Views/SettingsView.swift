@@ -12,10 +12,13 @@ struct SettingsView: View {
     @ObservedObject var settingsManager: SettingsManager
     @Environment(\.dismiss) private var dismiss
     
+    @State private var cacheSize: Int = 0
+    @State private var showingClearCacheAlert = false
+    
     var body: some View {
         NavigationStack {
             List {
-                // App Mode Section - WITH ICONS
+                // App Mode Section
                 Section {
                     Toggle(isOn: $settingsManager.settings.isAIEnabled) {
                         HStack(spacing: 12) {
@@ -44,7 +47,30 @@ struct SettingsView: View {
                          "View sample summaries without AI. Perfect for testing the app.")
                 }
                 
-                // About Section - WITH ICONS
+                // Cover Cache Section - NEW!
+                Section {
+                    HStack {
+                        Label("Cache Size", systemImage: "photo.stack")
+                        Spacer()
+                        Text(formattedCacheSize)
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    Button(role: .destructive, action: {
+                        showingClearCacheAlert = true
+                    }) {
+                        HStack {
+                            Label("Clear Cover Cache", systemImage: "trash")
+                            Spacer()
+                        }
+                    }
+                } header: {
+                    Text("Storage")
+                } footer: {
+                    Text("Book cover images are cached locally (up to 100 MB). Clear cache to free up space.")
+                }
+                
+                // About Section
                 Section {
                     HStack {
                         Label("Version", systemImage: "info.circle")
@@ -63,19 +89,19 @@ struct SettingsView: View {
                     Text("About")
                 }
                 
-                // Legal Section - WITH ICONS AND SHARE
+                // Legal Section
                 Section {
                     if let url = URL(string: "https://mshreerang.github.io/book-companion-ios/privacy-policy.html") {
-                            Link(destination: url) {
-                                HStack {
-                                    Label("Privacy Policy", systemImage: "hand.raised")
-                                    Spacer()
-                                    Image(systemName: "arrow.up.forward")
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                }
+                        Link(destination: url) {
+                            HStack {
+                                Label("Privacy Policy", systemImage: "hand.raised")
+                                Spacer()
+                                Image(systemName: "arrow.up.forward")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
                             }
                         }
+                    }
                     
                     Link(destination: URL(string: "mailto:shree.mandlekar@gmail.com")!) {
                         HStack {
@@ -98,7 +124,7 @@ struct SettingsView: View {
                     Text("Legal & Support")
                 }
                 
-                // App Info Section - WITH GRADIENT ICON
+                // App Info Section
                 Section {
                     VStack(spacing: 16) {
                         // App Icon with Gradient
@@ -152,6 +178,19 @@ struct SettingsView: View {
                     }
                 }
             }
+            .alert("Clear Cover Cache?", isPresented: $showingClearCacheAlert) {
+                Button("Cancel", role: .cancel) { }
+                Button("Clear", role: .destructive) {
+                    Task {
+                        await clearCache()
+                    }
+                }
+            } message: {
+                Text("This will delete all cached book cover images (\(formattedCacheSize)). Covers will be re-downloaded when needed.")
+            }
+            .onAppear {
+                loadCacheSize()
+            }
         }
     }
     
@@ -165,6 +204,31 @@ struct SettingsView: View {
         Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
     }
     
-     
-   
+    private var formattedCacheSize: String {
+        let mb = Double(cacheSize) / 1_000_000
+        if mb < 0.1 {
+            return "Empty"
+        } else if mb < 1.0 {
+            return String(format: "%.1f KB", Double(cacheSize) / 1_000)
+        } else {
+            return String(format: "%.1f MB", mb)
+        }
+    }
+    
+    // MARK: - Cache Management
+    
+    private func loadCacheSize() {
+        Task {
+            let size = await CoverImageManager.shared.getTotalStorageUsed()
+            await MainActor.run {
+                cacheSize = size
+            }
+        }
+    }
+    
+    private func clearCache() async {
+        await CoverImageManager.shared.clearAllCovers()
+        HapticManager.success()
+        loadCacheSize()
+    }
 }

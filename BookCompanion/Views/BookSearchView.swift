@@ -29,170 +29,150 @@ struct BookSearchView: View {
         self.makeCharactersViewModel = makeCharactersViewModel
     }
 
+    // ✅ Simplified filter - broken into separate steps
     private var filteredBooks: [Book] {
-        guard !viewModel.searchText.isEmpty else {
-            return viewModel.books
+        let searchText = viewModel.searchText
+        let allBooks = viewModel.books
+        
+        guard !searchText.isEmpty else {
+            return allBooks
         }
 
-        return viewModel.books.filter {
-            $0.title.localizedCaseInsensitiveContains(viewModel.searchText) ||
-            $0.author.localizedCaseInsensitiveContains(viewModel.searchText)
+        return allBooks.filter { book in
+            let matchesTitle = book.title.localizedCaseInsensitiveContains(searchText)
+            let matchesAuthor = book.author.localizedCaseInsensitiveContains(searchText)
+            return matchesTitle || matchesAuthor
         }
     }
 
     var body: some View {
-        Group {
+        VStack(spacing: 0) {
             if filteredBooks.isEmpty && viewModel.searchText.isEmpty {
                 // Empty state - no books at all
-                ContentUnavailableView {
-                    Label("No Books Yet", systemImage: "book.closed")
-                } description: {
-                    Text("Add your first book to get started")
-                } actions: {
-                    Button {
-                        showingAddBook = true
-                    } label: {
-                        Text("Add Book")
-                    }
-                    .buttonStyle(.borderedProminent)
-                }
+                EmptyLibraryView(onAddBook: {
+                    showingAddBook = true
+                })
             } else if filteredBooks.isEmpty {
                 // Empty state - search found nothing
                 ContentUnavailableView.search
             } else {
-                // Show books
-                // Results
-                List {
-                    ForEach(filteredBooks) { book in
-                        NavigationLink {
-                            ProgressInputView(
-                                viewModel: makeProgressViewModel(book),
-                                makeSummaryViewModel: makeSummaryViewModel,
-                                makeCharactersViewModel: makeCharactersViewModel
-                            )
-                        } label: {
-                            HStack(spacing: 12) {
-                                // Book Cover
-                                if let coverURL = book.coverImageURL,
-                                   let url = URL(string: coverURL) {
-                                    AsyncImage(url: url) { phase in
-                                        switch phase {
-                                        case .success(let image):
-                                            image
-                                                .resizable()
-                                                .aspectRatio(contentMode: .fill)
-                                        case .empty:
-                                            placeholderCover
-                                        case .failure(_):
-                                            placeholderCover
-                                        @unknown default:
-                                            placeholderCover
-                                        }
-                                    }
-                                    .frame(width: 60, height: 90)
-                                    .cornerRadius(6)
-                                    .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
-                                } else {
-                                    placeholderCover
-                                        .frame(width: 60, height: 90)
+                // Show books in card layout
+                ScrollView {
+                    LazyVStack(spacing: 16) {
+                        ForEach(filteredBooks) { book in
+                            NavigationLink {
+                                ProgressInputView(
+                                    viewModel: makeProgressViewModel(book),
+                                    makeSummaryViewModel: makeSummaryViewModel,
+                                    makeCharactersViewModel: makeCharactersViewModel
+                                )
+                                .onDisappear {
+                                    bookManager.reloadProgress()
                                 }
-                                
-                                // Book Info
-                                VStack(alignment: .leading, spacing: 6) {
-                                    Text(book.title)
-                                        .font(.headline)
-                                        .lineLimit(2)
-                                    
-                                    Text(book.author)
-                                        .font(.subheadline)
-                                        .foregroundColor(.secondary)
-                                        .lineLimit(1)
-                                    
-                                    HStack(spacing: 8) {
-                                        Label(book.chaptersInfo, systemImage: "book.pages")
-                                            .font(.caption)
-                                            .foregroundColor(.secondary)
-                                        
-                                        Spacer()
-                                        
-                                        Text(book.language.displayName)
-                                            .font(.caption)
-                                            .foregroundColor(.secondary)
-                                    }
+                            } label: {
+                                BookCard(book: book)
+                            }
+                            .buttonStyle(.plain)
+                            .contextMenu {
+                                Button(role: .destructive) {
+                                    deleteBook(book)
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
                                 }
                             }
-                            .padding(.vertical, 4)
                         }
                     }
-                    .onDelete { indexSet in
-                        bookManager.deleteBooks(at: indexSet)
-                    }
+                    .padding()
+                    .padding(.bottom, 80) // Space for FAB
                 }
             }
         }
         .navigationTitle("My Library")
-        .searchable(
-            text: $viewModel.searchText,
-            prompt: "Search by title or author"
-        )
         .toolbar {
-            ToolbarItem(placement: .navigationBarLeading) {
-                Button {
-                    showingAddBook = true
-                } label: {
-                    Image(systemName: "plus")
-                }
-            }
-            
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button {
                     showingSettings = true
                 } label: {
                     Image(systemName: "gear")
                 }
-            }        }
+                .accessibleButton(
+                    label: A11y.Library.settingsButton,
+                    hint: A11y.Library.settingsButtonHint
+                )
+            }
+        }
         .sheet(isPresented: $showingAddBook) {
-            SearchBooksView(bookManager: bookManager)
+            UnifiedSearchView()
+                .environmentObject(bookManager)
         }
         .sheet(isPresented: $showingSettings) {
             SettingsView(settingsManager: settingsManager)
         }
         .overlay(alignment: .bottomTrailing) {
+            fabButton
+        }
+    }
+    
+    // ✅ Extracted FAB to separate computed property
+    private var fabButton: some View {
+        VStack(alignment: .trailing, spacing: 12) {
+            // Floating Action Button (FAB)
+            Button(action: {
+                HapticManager.lightImpact()
+                showingAddBook = true
+            }) {
+                Image(systemName: "plus")
+                    .font(.title3.weight(.semibold))
+                    .foregroundColor(.white)
+                    .frame(width: 56, height: 56)
+                    .background(
+                        LinearGradient(
+                            colors: [Color.blue, Color.purple],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .clipShape(Circle())
+                    .shadow(color: .black.opacity(0.3), radius: 8, x: 0, y: 4)
+            }
+            .accessibleButton(
+                label: A11y.Library.searchButton,
+                hint: "Open book search"
+            )
+            
             // Mode badge
+            modeBadge
+        }
+        .padding(20)
+    }
+    
+    // ✅ Extracted mode badge to separate computed property
+    private var modeBadge: some View {
+        Group {
             if settingsManager.settings.isAIEnabled {
-                Label("AI", systemImage: "sparkles")
-                    .font(.caption2)
+                Text("AI")
+                    .font(.caption2.weight(.medium))
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
-                    .background(.green.opacity(0.2))
-                    .foregroundColor(.green)
+                    .background(.green)
+                    .foregroundColor(.white)
                     .cornerRadius(8)
-                    .padding()
             } else {
-                Label("Offline", systemImage: "airplane")
-                    .font(.caption2)
+                Text("Offline")
+                    .font(.caption2.weight(.medium))
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
-                    .background(.blue.opacity(0.2))
-                    .foregroundColor(.blue)
+                    .background(.blue)
+                    .foregroundColor(.white)
                     .cornerRadius(8)
-                    .padding()
             }
         }
     }
-    private var placeholderCover: some View {
-        Rectangle()
-            .fill(LinearGradient(
-                colors: [Color.blue.opacity(0.3), Color.purple.opacity(0.3)],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            ))
-            .cornerRadius(6)
-            .overlay {
-                Image(systemName: "book.closed.fill")
-                    .font(.title2)
-                    .foregroundColor(.white.opacity(0.8))
-            }
-            .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
+    
+    // ✅ Extracted delete logic
+    private func deleteBook(_ book: Book) {
+        if let index = bookManager.books.firstIndex(where: { $0.id == book.id }) {
+            bookManager.deleteBooks(at: IndexSet(integer: index))
+        }
     }
 }
