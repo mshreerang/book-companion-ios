@@ -5,13 +5,25 @@ struct SummaryView: View {
     @StateObject private var viewModel: SummaryViewModel
     @StateObject private var ttsManager = TextToSpeechManager.shared
     let chapter: Int
+    let bookTitle: String  // ✅ NEW
+    let author: String     // ✅ NEW
+    
+    // ✅ NEW: Share sheet state
+    @State private var showingShareSheet = false
+    
+    // ✅ NEW: Random loading message (set once per view)
+    private let loadingMessage = LoadingMessages.randomSummaryMessage()
 
     init(
         viewModel: SummaryViewModel,
-        chapter: Int
+        chapter: Int,
+        bookTitle: String,  // ✅ NEW
+        author: String      // ✅ NEW
     ) {
         _viewModel = StateObject(wrappedValue: viewModel)
         self.chapter = chapter
+        self.bookTitle = bookTitle
+        self.author = author
     }
 
     var body: some View {
@@ -52,22 +64,48 @@ struct SummaryView: View {
                 }
             }
             
-            // Loading state - FIXED!
+            // ✅ STREAMING OR LOADING STATE
             if viewModel.isLoading {
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 16) {
-                        // Chapter indicator skeleton
-                        SkeletonBox(width: 180, height: 12, cornerRadius: 6)
-                        
-                        Spacer().frame(height: 8)
-                        
-                        // Summary content skeleton
-                        SummarySkeleton()
+                if viewModel.isStreaming && !viewModel.streamingText.isEmpty {
+                    // ✅ SHOW STREAMING TEXT
+                    ScrollView {
+                        Text(viewModel.streamingText)
+                            .font(.body)
+                            .padding()
+                            .textSelection(.enabled)
                     }
-                    .padding()
+                } else {
+                    // ✅ SHOW LOADING MESSAGE + SKELETON WHILE WAITING FOR FIRST CHUNK
+                    VStack(spacing: 24) {
+                        // ✅ FUN LOADING MESSAGE
+                        VStack(spacing: 12) {
+                            ProgressView()
+                                .scaleEffect(1.2)
+                            
+                            Text(loadingMessage)
+                                .font(.headline)
+                                .foregroundColor(.secondary)
+                                .multilineTextAlignment(.center)
+                        }
+                        .padding(.top, 40)
+                        
+                        // SKELETON PREVIEW
+                        ScrollView {
+                            VStack(alignment: .leading, spacing: 16) {
+                                // Chapter indicator skeleton
+                                SkeletonBox(width: 180, height: 12, cornerRadius: 6)
+                                
+                                Spacer().frame(height: 8)
+                                
+                                // Summary content skeleton
+                                SummarySkeleton()
+                            }
+                            .padding()
+                        }
+                    }
                 }
             } else if let error = viewModel.error {
-                // Error state
+                // ✅ ERROR STATE
                 VStack {
                     Spacer()
                     VStack(spacing: 16) {
@@ -146,11 +184,12 @@ struct SummaryView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 
             } else if let summary = viewModel.summary {
-                // Success state - show summary
+                // ✅ SUCCESS STATE - SHOW COMPLETE SUMMARY
                 ScrollView {
                     Text(summary.content)
                         .font(.body)
                         .padding()
+                        .textSelection(.enabled)
                 }
             }
         }
@@ -159,36 +198,107 @@ struct SummaryView: View {
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 HStack(spacing: 16) {
-                    // Listen button
+                    // ✅ NEW: Share button
                     Button {
                         HapticManager.lightImpact()
+                        showingShareSheet = true
+                    } label: {
+                        Image(systemName: "square.and.arrow.up")
+                            .font(.title3)
+                    }
+                    .disabled(viewModel.summary == nil)
+                    .accessibilityLabel("Share Summary")
+                    
+                    // TTS Controls (Play/Pause or Stop)
+                    if ttsManager.isSpeaking {
+                        // Show Pause + Stop when playing/paused
+                        Button {
+                            HapticManager.lightImpact()
+                            if ttsManager.isPaused {
+                                ttsManager.resume()
+                            } else {
+                                ttsManager.pause()
+                            }
+                        } label: {
+                            Image(systemName: ttsManager.isPaused ? "play.fill" : "pause.fill")
+                                .font(.title3)
+                        }
+                        .accessibilityLabel(ttsManager.isPaused ? "Resume" : "Pause")
                         
-                        if ttsManager.isSpeaking {
+                        Button {
+                            HapticManager.lightImpact()
                             ttsManager.stop()
-                        } else {
+                        } label: {
+                            Image(systemName: "stop.fill")
+                                .font(.title3)
+                        }
+                        .accessibilityLabel("Stop")
+                        
+                    } else {
+                        // Show Play when not playing
+                        Button {
+                            HapticManager.lightImpact()
                             if let summary = viewModel.summary {
                                 ttsManager.speak(text: summary.content, language: summary.language)
                             }
+                        } label: {
+                            Image(systemName: "speaker.wave.2.fill")
+                                .font(.title3)
                         }
-                    } label: {
-                        Label(
-                            ttsManager.isSpeaking ? "Stop" : "Listen",
-                            systemImage: ttsManager.isSpeaking ? "stop.fill" : "speaker.wave.2.fill"
-                        )
+                        .disabled(viewModel.summary == nil)
+                        .accessibilityLabel("Listen")
                     }
-                    .disabled(viewModel.summary == nil)
                     
-                    // Characters button
+                    // Characters button (always visible)
                     NavigationLink {
                         CharactersView(characters: viewModel.characters)
                     } label: {
-                        Label("Characters", systemImage: "person.2.fill")
+                        Image(systemName: "person.2.fill")
+                            .font(.title3)
                     }
+                    .accessibilityLabel("Characters")
                 }
+            }
+        }
+        .sheet(isPresented: $showingShareSheet) {
+            // ✅ NEW: Share sheet
+            if let summary = viewModel.summary {
+                ShareSheet(items: [formatSummaryForSharing(summary)])
             }
         }
         .task(id: chapter) {
             await viewModel.generate(chapter: chapter)
         }
     }
+    
+    // ✅ NEW: Format summary for sharing (with book info)
+    private func formatSummaryForSharing(_ summary: BookSummary) -> String {
+        let header = author.isEmpty
+            ? "📖 \(bookTitle)\nChapter \(chapter)"
+            : "📖 \(bookTitle) by \(author)\nChapter \(chapter)"
+        
+        return """
+        \(header)
+        
+        \(summary.content)
+        
+        ---
+        Generated by BookCompanion
+        """
+    }
+}
+
+// ✅ NEW: iOS Share Sheet wrapper
+struct ShareSheet: UIViewControllerRepresentable {
+    let items: [Any]
+    
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        let controller = UIActivityViewController(
+            activityItems: items,
+            applicationActivities: nil
+        )
+        return controller
+    }
+    
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }

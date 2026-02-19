@@ -13,6 +13,7 @@ final class TextToSpeechManager: NSObject, ObservableObject {
     static let shared = TextToSpeechManager()
     
     @Published var isSpeaking = false
+    @Published var isPaused = false  // ✅ NEW: Track pause state
     
     private let synthesizer = AVSpeechSynthesizer()
     
@@ -32,39 +33,39 @@ final class TextToSpeechManager: NSObject, ObservableObject {
         let utterance = AVSpeechUtterance(string: text)
         
         // Set voice based on language
-            let voiceLanguage: String
-            switch language {
-            case .english:
-                voiceLanguage = "en-US"
-            case .hindi:
-                voiceLanguage = "hi-IN"
-            case .marathi:
-                voiceLanguage = "hi-IN"
+        switch language {
+        case .english:
+            utterance.voice = AVSpeechSynthesisVoice(language: "en-US")
+        case .hindi:
+            utterance.voice = AVSpeechSynthesisVoice(language: "hi-IN")
+        case .marathi:
+            utterance.voice = AVSpeechSynthesisVoice(language: "mr-IN")
         }
-        utterance.voice = AVSpeechSynthesisVoice(language: voiceLanguage)
+        
         // Speech settings
         utterance.rate = 0.5 // Slightly slower for clarity
         utterance.pitchMultiplier = 1.0
         utterance.volume = 1.0
         
-        // ✅ Add pre-utterance delay for better start
-            utterance.preUtteranceDelay = 0.1
-        
         isSpeaking = true
+        isPaused = false  // ✅ NEW: Reset pause state
         synthesizer.speak(utterance)
     }
     
     func stop() {
         synthesizer.stopSpeaking(at: .immediate)
         isSpeaking = false
+        isPaused = false  // ✅ NEW: Reset pause state
     }
     
     func pause() {
         synthesizer.pauseSpeaking(at: .word)
+        isPaused = true  // ✅ NEW: Set pause state
     }
     
     func resume() {
         synthesizer.continueSpeaking()
+        isPaused = false  // ✅ NEW: Clear pause state
     }
 }
 
@@ -74,9 +75,21 @@ extension TextToSpeechManager: AVSpeechSynthesizerDelegate {
     
     func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) {
         isSpeaking = false
+        isPaused = false  // ✅ NEW: Clear pause state when done
     }
     
     func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didCancel utterance: AVSpeechUtterance) {
         isSpeaking = false
+        isPaused = false  // ✅ NEW: Clear pause state when cancelled
+    }
+    
+    // ✅ NEW: Track pause events
+    func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didPause utterance: AVSpeechUtterance) {
+        isPaused = true
+    }
+    
+    // ✅ NEW: Track resume events
+    func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didContinue utterance: AVSpeechUtterance) {
+        isPaused = false
     }
 }

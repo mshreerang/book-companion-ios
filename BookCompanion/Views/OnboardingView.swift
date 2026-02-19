@@ -42,7 +42,7 @@ struct OnboardingView: View {
                 )
                 .tag(1)
                 
-                // Page 3: Get Started
+                // Page 3: Get Started with Age Verification
                 OnboardingFinalPageView(onComplete: {
                     completeOnboarding()
                 })
@@ -105,10 +105,12 @@ struct OnboardingPageView: View {
     }
 }
 
-// MARK: - Final Page
+// MARK: - Final Page with Age Verification
 
 struct OnboardingFinalPageView: View {
     let onComplete: () -> Void
+    
+    @State private var isAgeVerified = false
     
     var body: some View {
         VStack(spacing: 40) {
@@ -139,27 +141,72 @@ struct OnboardingFinalPageView: View {
             
             Spacer()
             
-            // Get Started Button
-            Button {
-                onComplete()
-            } label: {
-                Text("Get Started")
-                    .font(.headline)
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-                    .background(
-                        LinearGradient(
-                            colors: [.blue, .purple],
-                            startPoint: .leading,
-                            endPoint: .trailing
+            // Age Verification Section
+            VStack(spacing: 20) {
+                // Divider
+                Rectangle()
+                    .fill(Color.gray.opacity(0.3))
+                    .frame(height: 1)
+                    .padding(.horizontal, 32)
+                
+                // Age Checkbox
+                Button {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        isAgeVerified.toggle()
+                        if isAgeVerified {
+                            HapticManager.lightImpact()
+                        }
+                    }
+                } label: {
+                    HStack(spacing: 12) {
+                        // Checkbox
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 6)
+                                .stroke(isAgeVerified ? Color.green : Color.gray, lineWidth: 2)
+                                .frame(width: 24, height: 24)
+                            
+                            if isAgeVerified {
+                                Image(systemName: "checkmark")
+                                    .font(.system(size: 14, weight: .bold))
+                                    .foregroundColor(.green)
+                            }
+                        }
+                        
+                        // Text
+                        Text("I am 13 years or older")
+                            .font(.subheadline)
+                            .foregroundColor(.primary)
+                        
+                        Spacer()
+                    }
+                    .padding(.horizontal, 32)
+                }
+                .buttonStyle(.plain)
+                
+                // Get Started Button
+                Button {
+                    HapticManager.success()
+                    onComplete()
+                } label: {
+                    Text("Get Started")
+                        .font(.headline)
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(
+                            LinearGradient(
+                                colors: isAgeVerified ? [.blue, .purple] : [.gray, .gray],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
                         )
-                    )
-                    .cornerRadius(16)
-                    .shadow(color: .blue.opacity(0.3), radius: 10, x: 0, y: 5)
+                        .cornerRadius(16)
+                        .shadow(color: isAgeVerified ? .blue.opacity(0.3) : .clear, radius: 10, x: 0, y: 5)
+                }
+                .disabled(!isAgeVerified)
+                .padding(.horizontal, 32)
+                .padding(.bottom, 40)
             }
-            .padding(.horizontal, 32)
-            .padding(.bottom, 40)
         }
         .padding()
     }

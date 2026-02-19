@@ -234,7 +234,9 @@ struct PrimaryActionButton: View {
         NavigationLink {
             SummaryView(
                 viewModel: makeSummaryViewModel(book, language, length),
-                chapter: chapter
+                chapter: chapter,
+                bookTitle: book.title,
+                author: book.author
             )
             .id(chapter)
         } label: {

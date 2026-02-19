@@ -48,13 +48,13 @@ struct BookSearchView: View {
     var body: some View {
         VStack(spacing: 0) {
             if filteredBooks.isEmpty && viewModel.searchText.isEmpty {
-                // Empty state - no books at all
+                // ✅ IMPROVED: Empty state - no books at all
                 EmptyLibraryView(onAddBook: {
                     showingAddBook = true
                 })
             } else if filteredBooks.isEmpty {
-                // Empty state - search found nothing
-                ContentUnavailableView.search
+                // ✅ IMPROVED: Empty state - search found nothing
+                EmptySearchResultsView(searchQuery: viewModel.searchText)
             } else {
                 // Show books in card layout
                 ScrollView {
@@ -88,6 +88,7 @@ struct BookSearchView: View {
             }
         }
         .navigationTitle("My Library")
+        .searchable(text: $viewModel.searchText, prompt: "Search your library...")
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button {

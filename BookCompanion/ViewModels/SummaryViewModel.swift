@@ -1,146 +1,273 @@
 import Foundation
+import SwiftUI
 import Combine
 
 @MainActor
-final class SummaryViewModel: ObservableObject {
-
-    @Published private(set) var summary: BookSummary?
-    @Published private(set) var characters: [BookCharacter] = []
-    @Published private(set) var isLoading = false
-    @Published private(set) var isCached = false
-    @Published private(set) var error: Error?
-
+class SummaryViewModel: ObservableObject {
+    
+    @Published var summary: BookSummary?
+    @Published var characters: [BookCharacter] = []
+    @Published var isLoading = false
+    @Published var error: Error?
+    @Published var isCached = false
+    
+    // ✅ NEW: Streaming state
+    @Published var streamingText = ""
+    @Published var isStreaming = false
+    
     private let book: Book
     private let language: Language
-    private let length: SummaryLength  // ✅ Add this
+    private let length: SummaryLength
     private let generator: SummaryGenerator
     private let summaryRepository: SummaryRepository
-
+    
     init(
         book: Book,
         language: Language,
-        length: SummaryLength,  // ✅ Add this parameter
+        length: SummaryLength,
         generator: SummaryGenerator,
         summaryRepository: SummaryRepository
     ) {
         self.book = book
         self.language = language
-        self.length = length  // ✅ Store it
+        self.length = length
         self.generator = generator
         self.summaryRepository = summaryRepository
     }
-
+    
+    // ✅ STREAMING GENERATION
     func generate(chapter: Int) async {
         isLoading = true
-        isCached = false
+        isStreaming = true
+        streamingText = ""
         error = nil
+        isCached = false
         
-        // 1️⃣ Try cache first (now includes length in key)
-        if let cachedSummary = summaryRepository.loadSummary(
+        // Check cache first
+        if let cachedSummary = loadCachedSummary(chapter: chapter) {
+            // Animate cached summary (simulate streaming for consistency)
+            await animateCachedSummary(cachedSummary)
+            return
+        }
+        
+        do {
+            // Stream new summary from API
+            try await streamSummary(chapter: chapter)
+        } catch {
+            self.error = error
+            self.isLoading = false
+            self.isStreaming = false
+        }
+    }
+    
+    // ✅ REGENERATE (force new generation, skip cache)
+    func regenerate(chapter: Int) async {
+        isLoading = true
+        isStreaming = true
+        streamingText = ""
+        error = nil
+        isCached = false
+        
+        do {
+            try await streamSummary(chapter: chapter)
+        } catch {
+            self.error = error
+            self.isLoading = false
+            self.isStreaming = false
+        }
+    }
+    
+    // ✅ CORE STREAMING LOGIC
+    private func streamSummary(chapter: Int) async throws {
+        guard let url = URL(string: "\(Config.apiEndpoint)/api/generate-summary") else {
+            throw AIError.requestFailed
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(Config.appSecret, forHTTPHeaderField: "X-App-Secret")
+        request.timeoutInterval = Config.summaryTimeoutSeconds
+        
+        let body: [String: Any] = [
+            "bookTitle": book.title,
+            "author": book.author,
+            "chapter": chapter,
+            "language": language.displayName,
+            "length": length.rawValue,
+            "stream": true  // ✅ Enable streaming
+        ]
+        
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        
+        print("📡 Streaming summary for chapter \(chapter)...")
+        
+        // ✅ STREAMING REQUEST
+        let (bytes, response) = try await URLSession.shared.bytes(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw AIError.requestFailed
+        }
+        
+        guard httpResponse.statusCode == 200 else {
+            switch httpResponse.statusCode {
+            case 401:
+                throw AIError.unauthorized
+            case 429:
+                throw AIError.rateLimited
+            default:
+                throw AIError.requestFailed
+            }
+        }
+        
+        var fullSummary = ""
+        
+        // ✅ PROCESS STREAM LINE BY LINE
+        for try await line in bytes.lines {
+            // SSE format: "data: {json}\n\n"
+            if line.hasPrefix("data: ") {
+                let jsonString = String(line.dropFirst(6)) // Remove "data: "
+                
+                if let data = jsonString.data(using: .utf8),
+                   let event = try? JSONDecoder().decode(StreamEvent.self, from: data) {
+                    
+                    switch event.type {
+                    case "chunk":
+                        // ✅ UPDATE UI WITH CHUNK
+                        if let content = event.content {
+                            fullSummary += content
+                            streamingText = fullSummary
+                            
+                            // Add small delay for smooth animation
+                            try? await Task.sleep(nanoseconds: 10_000_000) // 0.01s
+                        }
+                        
+                    case "done":
+                        // ✅ STREAMING COMPLETE
+                        let summary = BookSummary(
+                            id: UUID(),
+                            bookId: book.id,
+                            chapter: chapter,
+                            progressId: UUID(),
+                            content: event.summary ?? fullSummary,
+                            language: language,
+                            length: length,
+                            generatedAt: Date()
+                        )
+                        
+                        // Save to cache
+                        saveSummaryToCache(summary, chapter: chapter)
+                        
+                        // Update UI
+                        self.summary = summary
+                        self.isLoading = false
+                        self.isStreaming = false
+                        self.isCached = false
+                        
+                        print("✅ Summary streaming complete!")
+                        
+                        // Generate characters in background
+                        Task {
+                            await loadCharacters(chapter: chapter)
+                        }
+                        
+                    default:
+                        break
+                    }
+                }
+            }
+        }
+    }
+    
+    // ✅ ANIMATE CACHED SUMMARY (simulate streaming for consistency)
+    private func animateCachedSummary(_ summary: BookSummary) async {
+        isCached = true
+        
+        // Split into words
+        let words = summary.content.split(separator: " ")
+        var currentText = ""
+        
+        // Animate word-by-word (faster than real streaming)
+        for word in words {
+            currentText += word + " "
+            streamingText = currentText
+            
+            // Fast animation (20ms per word)
+            try? await Task.sleep(nanoseconds: 20_000_000)
+        }
+        
+        // Set final summary
+        self.summary = summary
+        self.isLoading = false
+        self.isStreaming = false
+        
+        // Load characters
+        Task {
+            await loadCharacters(chapter: summary.chapter)
+        }
+    }
+    
+    // ✅ LOAD CHARACTERS
+    private func loadCharacters(chapter: Int) async {
+        // Check cache first
+        if let cachedCharacters = loadCachedCharacters(chapter: chapter) {
+            self.characters = cachedCharacters
+            return
+        }
+        
+        // Generate new
+        do {
+            let characters = try await generator.generateCharacters(
+                book: book,
+                chapter: chapter,
+                language: language
+            )
+            saveCharactersToCache(characters, chapter: chapter)
+            self.characters = characters
+        } catch {
+            print("⚠️ Failed to load characters: \(error)")
+            // Don't show error for characters, just leave empty
+        }
+    }
+    
+    // MARK: - Cache Management
+    
+    private func loadCachedSummary(chapter: Int) -> BookSummary? {
+        return summaryRepository.loadSummary(
             bookId: book.id,
             chapter: chapter,
             language: language,
-            length: length  // ✅ Add length to cache key
-        ) {
-            print("✅ Loaded from cache: Chapter \(chapter)")
-            self.summary = cachedSummary
-            
-            // ✅ Load cached characters too
-            if let cachedCharacters = summaryRepository.loadCharacters(
-                bookId: book.id,
-                chapter: chapter,
-                language: language,
-                length: length  // ✅ Add length to cache key
-            ) {
-                print("✅ Loaded characters from cache")
-                self.characters = cachedCharacters
-            } else {
-                self.characters = []
-            }
-            
-            self.isCached = true
-            self.isLoading = false
-            return
-        }
-        print("⚠️ No cache found, generating new summary for Chapter \(chapter)") 
-        // 2️⃣ Otherwise generate
-        isLoading = true
-        defer { isLoading = false }
-        
-        do {
-            let generatedSummary = try await generator.generateSummary(
-                book: book,
-                chapter: chapter,
-                language: language,
-                length: length  // ✅ Pass length to generator
-            )
-            
-            let generatedCharacters = try await generator.generateCharacters(
-                book: book,
-                chapter: chapter,
-                language: language
-            )
-            
-            // ✅ Save both
-            summaryRepository.saveSummary(generatedSummary)
-            summaryRepository.saveCharacters(
-                generatedCharacters,
-                bookId: book.id,
-                chapter: chapter,
-                language: language,
-                length: length  // ✅ Add length to cache key
-            )
-            
-            self.summary = generatedSummary
-            self.characters = generatedCharacters
-            self.isCached = false
-            self.error = nil
-            
-        } catch {
-            summary = nil
-            characters = []
-            self.error = error
-        }
+            length: length
+        )
     }
+    
+    private func saveSummaryToCache(_ summary: BookSummary, chapter: Int) {
+        summaryRepository.saveSummary(summary)
+    }
+    
+    private func loadCachedCharacters(chapter: Int) -> [BookCharacter]? {
+        return summaryRepository.loadCharacters(
+            bookId: book.id,
+            chapter: chapter,
+            language: language,
+            length: length
+        )
+    }
+    
+    private func saveCharactersToCache(_ characters: [BookCharacter], chapter: Int) {
+        summaryRepository.saveCharacters(
+            characters,
+            bookId: book.id,
+            chapter: chapter,
+            language: language,
+            length: length
+        )
+    }
+}
 
-    func regenerate(chapter: Int) async {
-        isLoading = true
-        isCached = false
-        error = nil
-        defer { isLoading = false }
-        
-        do {
-            let generatedSummary = try await generator.generateSummary(
-                book: book,
-                chapter: chapter,
-                language: language,
-                length: length  // ✅ Pass length to generator
-            )
-            
-            let generatedCharacters = try await generator.generateCharacters(
-                book: book,
-                chapter: chapter,
-                language: language
-            )
-            
-            // ✅ Save both
-            summaryRepository.saveSummary(generatedSummary)
-            summaryRepository.saveCharacters(
-                generatedCharacters,
-                bookId: book.id,
-                chapter: chapter,
-                language: language,
-                length: length  // ✅ Add length to cache key
-            )
-            
-            self.summary = generatedSummary
-            self.characters = generatedCharacters
-            self.error = nil
-            
-        } catch {
-            summary = nil
-            characters = []
-            self.error = error
-        }
-    }
+// ✅ STREAM EVENT MODEL
+struct StreamEvent: Codable {
+    let type: String
+    let content: String?
+    let summary: String?
 }

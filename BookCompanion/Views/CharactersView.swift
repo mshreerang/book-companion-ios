@@ -26,11 +26,8 @@ struct CharactersView: View {
     var body: some View {
         Group {
             if characters.isEmpty {
-                ContentUnavailableView {
-                    Label("No Characters Yet", systemImage: "person.2.slash")
-                } description: {
-                    Text("Characters will appear here once they're introduced in the story")
-                }
+                // ✅ IMPROVED: Beautiful empty state
+                EmptyCharactersView()
             } else if filteredCharacters.isEmpty {
                 ContentUnavailableView.search(text: searchText)
             } else {
