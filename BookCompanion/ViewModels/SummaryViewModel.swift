@@ -6,7 +6,6 @@ import Combine
 class SummaryViewModel: ObservableObject {
     
     @Published var summary: BookSummary?
-    @Published var characters: [BookCharacter] = []
     @Published var isLoading = false
     @Published var error: Error?
     @Published var isCached = false
@@ -20,7 +19,7 @@ class SummaryViewModel: ObservableObject {
     private let length: SummaryLength
     private let generator: SummaryGenerator
     private let summaryRepository: SummaryRepository
-    
+    private var isLoadingCharacters = false
     init(
         book: Book,
         language: Language,
@@ -165,11 +164,7 @@ class SummaryViewModel: ObservableObject {
                         self.isCached = false
                         
                         print("✅ Summary streaming complete!")
-                        
-                        // Generate characters in background
-                        Task {
-                            await loadCharacters(chapter: chapter)
-                        }
+                      
                         
                     default:
                         break
@@ -200,36 +195,10 @@ class SummaryViewModel: ObservableObject {
         self.summary = summary
         self.isLoading = false
         self.isStreaming = false
-        
-        // Load characters
-        Task {
-            await loadCharacters(chapter: summary.chapter)
-        }
+     
     }
     
-    // ✅ LOAD CHARACTERS
-    private func loadCharacters(chapter: Int) async {
-        // Check cache first
-        if let cachedCharacters = loadCachedCharacters(chapter: chapter) {
-            self.characters = cachedCharacters
-            return
-        }
-        
-        // Generate new
-        do {
-            let characters = try await generator.generateCharacters(
-                book: book,
-                chapter: chapter,
-                language: language
-            )
-            saveCharactersToCache(characters, chapter: chapter)
-            self.characters = characters
-        } catch {
-            print("⚠️ Failed to load characters: \(error)")
-            // Don't show error for characters, just leave empty
-        }
-    }
-    
+  
     // MARK: - Cache Management
     
     private func loadCachedSummary(chapter: Int) -> BookSummary? {
@@ -245,24 +214,7 @@ class SummaryViewModel: ObservableObject {
         summaryRepository.saveSummary(summary)
     }
     
-    private func loadCachedCharacters(chapter: Int) -> [BookCharacter]? {
-        return summaryRepository.loadCharacters(
-            bookId: book.id,
-            chapter: chapter,
-            language: language,
-            length: length
-        )
-    }
-    
-    private func saveCharactersToCache(_ characters: [BookCharacter], chapter: Int) {
-        summaryRepository.saveCharacters(
-            characters,
-            bookId: book.id,
-            chapter: chapter,
-            language: language,
-            length: length
-        )
-    }
+        
 }
 
 // ✅ STREAM EVENT MODEL
