@@ -5,8 +5,11 @@ struct SummaryView: View {
     @StateObject private var viewModel: SummaryViewModel
     @StateObject private var ttsManager = TextToSpeechManager.shared
     let chapter: Int
-    let bookTitle: String  // ✅ NEW
-    let author: String     // ✅ NEW
+    let bookTitle: String
+    let author: String
+    
+    // ✅ NEW: Pass these from parent view for character loading
+    let makeCharactersViewModel: (Book, Language) -> CharactersViewModel
     
     // ✅ NEW: Share sheet state
     @State private var showingShareSheet = false
@@ -17,13 +20,15 @@ struct SummaryView: View {
     init(
         viewModel: SummaryViewModel,
         chapter: Int,
-        bookTitle: String,  // ✅ NEW
-        author: String      // ✅ NEW
+        bookTitle: String,
+        author: String,
+        makeCharactersViewModel: @escaping (Book, Language) -> CharactersViewModel
     ) {
         _viewModel = StateObject(wrappedValue: viewModel)
         self.chapter = chapter
         self.bookTitle = bookTitle
         self.author = author
+        self.makeCharactersViewModel = makeCharactersViewModel
     }
 
     var body: some View {
@@ -249,14 +254,36 @@ struct SummaryView: View {
                         .accessibilityLabel("Listen")
                     }
                     
-                    // Characters button (always visible)
-                    NavigationLink {
-                        CharactersView(characters: viewModel.characters)
-                    } label: {
+                    // ✅ FIXED: Characters button navigates to CharactersLoadingView
+                    if let summary = viewModel.summary {
+                        NavigationLink {
+                            CharactersLoadingView(
+                                viewModel: makeCharactersViewModel(
+                                    Book(
+                                        id: summary.bookId,
+                                        title: bookTitle,
+                                        author: author,
+                                        language: summary.language,
+                                        totalChapters: chapter,  // Using chapter as temp value
+                                        coverImageURL: nil,
+                                        createdAt: Date()
+                                    ),
+                                    summary.language
+                                ),
+                                chapter: chapter,
+                                length: summary.length
+                            )
+                        } label: {
+                            Image(systemName: "person.2.fill")
+                                .font(.title3)
+                        }
+                        .accessibilityLabel("Characters")
+                    } else {
+                        // Disabled state when no summary
                         Image(systemName: "person.2.fill")
                             .font(.title3)
+                            .foregroundColor(.gray)
                     }
-                    .accessibilityLabel("Characters")
                 }
             }
         }

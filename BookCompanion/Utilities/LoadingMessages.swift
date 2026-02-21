@@ -36,6 +36,18 @@ enum LoadingMessages {
         "🎪 Gathering the ensemble...",
         "✨ Learning about the characters..."
     ]
+    static func randomCharacterMessage() -> String {
+        let messages = [
+            "👥 Meeting the characters...",
+            "📝 Noting character relationships...",
+            "🎭 Analyzing character development...",
+            "💭 Understanding character motivations...",
+            "🔍 Identifying key players...",
+            "✨ Mapping character connections...",
+            "📖 Profiling story participants..."
+        ]
+        return messages.randomElement() ?? "Loading characters..."
+    }
     
     static func randomSummaryMessage() -> String {
         summaryMessages.randomElement() ?? "Loading..."

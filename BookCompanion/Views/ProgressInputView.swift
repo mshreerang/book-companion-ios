@@ -35,7 +35,8 @@ struct ProgressInputView: View {
                     chapter: viewModel.selectedChapter,
                     language: viewModel.selectedLanguage,
                     length: viewModel.selectedLength,
-                    makeSummaryViewModel: makeSummaryViewModel
+                    makeSummaryViewModel: makeSummaryViewModel,
+                    makeCharactersViewModel: makeCharactersViewModel 
                 )
                 
                 // Secondary Action
@@ -221,6 +222,7 @@ struct CompactChapterSelector: View {
     }
 }
 
+
 // MARK: - Primary Action Button
 
 struct PrimaryActionButton: View {
@@ -229,6 +231,7 @@ struct PrimaryActionButton: View {
     let language: Language
     let length: SummaryLength
     let makeSummaryViewModel: (Book, Language, SummaryLength) -> SummaryViewModel
+    let makeCharactersViewModel: (Book, Language) -> CharactersViewModel  // ✅ ADD THIS
     
     var body: some View {
         NavigationLink {
@@ -236,7 +239,8 @@ struct PrimaryActionButton: View {
                 viewModel: makeSummaryViewModel(book, language, length),
                 chapter: chapter,
                 bookTitle: book.title,
-                author: book.author
+                author: book.author,
+                makeCharactersViewModel: makeCharactersViewModel  // ✅ ADD THIS
             )
             .id(chapter)
         } label: {
