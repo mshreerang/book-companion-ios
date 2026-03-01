@@ -132,6 +132,7 @@ final class CharacterChatViewModel: ObservableObject {
 
     // MARK: - Core SSE Streaming
 
+    @MainActor
     private func streamResponse(userMessage: String) async {
         isStreaming = true
 
@@ -477,43 +478,38 @@ final class CharacterChatViewModel: ObservableObject {
     /// human typing pace. Runs as a background Task so it doesn't block
     /// the SSE receive loop. Calls `finaliseStream()` when the buffer is
     /// empty AND the network has signalled done.
+    @MainActor
     private func startTypewriter() {
-        typewriterTask = Task { [weak self] in
+        // Runs entirely on MainActor — no actor hopping needed since the whole
+        // class is @MainActor. Simple loop: grab a char, update UI, sleep, repeat.
+        typewriterTask = Task { @MainActor [weak self] in
             guard let self else { return }
             while !Task.isCancelled {
-                // Grab next character from buffer
-                let next: Character? = await MainActor.run {
-                    guard !self.typewriterBuffer.isEmpty else { return nil }
-                    return self.typewriterBuffer.removeFirst()
-                }
 
-                guard let char = next else {
-                    // Buffer empty — check if the network is also done
-                    let done = await MainActor.run { self.networkStreamDone }
-                    if done {
-                        await MainActor.run { self.finaliseStream() }
+                // Nothing in buffer yet
+                guard !self.typewriterBuffer.isEmpty else {
+                    if self.networkStreamDone {
+                        self.finaliseStream()
                         return
                     }
-                    // Network still sending — wait briefly and check again
+                    // Network still sending — yield briefly and check again
                     try? await Task.sleep(nanoseconds: 10_000_000) // 10ms
                     continue
                 }
 
-                // Append the character to the displayed text
-                await MainActor.run {
-                    self.typewriterDisplayed.append(char)
-                    self.updateStreamingMessage(content: self.typewriterDisplayed, isStreaming: true)
-                }
+                // Take the next character and display it
+                let char = self.typewriterBuffer.removeFirst()
+                self.typewriterDisplayed.append(char)
+                self.updateStreamingMessage(content: self.typewriterDisplayed, isStreaming: true)
 
-                // Delay based on character type — punctuation feels like a beat
+                // Pacing — punctuation creates natural reading rhythm
                 let delay: UInt64
                 switch char {
-                case ".", "!", "?":  delay = 120_000_000  // 120ms — end of sentence pause
-                case ",", ";", ":":  delay = 60_000_000   // 60ms  — mid-sentence breath
-                case " ":            delay = 18_000_000   // 18ms  — word gap
-                default:             delay = 28_000_000   // 28ms  — base character speed
+                case ".", "!", "?":  delay = 120_000_000  // 120ms — end of sentence
+                case ",", ";", ":":  delay =  60_000_000  //  60ms — mid-sentence breath
+                case " ":            delay =  18_000_000  //  18ms — word gap
+                default:             delay =  28_000_000  //  28ms — base letter speed
                 }
-
                 try? await Task.sleep(nanoseconds: delay)
             }
         }

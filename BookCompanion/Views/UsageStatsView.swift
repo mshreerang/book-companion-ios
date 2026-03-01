@@ -1,4 +1,3 @@
-
 //
 //  UsageStatsView.swift
 //  BookCompanion
@@ -12,10 +11,11 @@ import Combine
 struct UsageStatsView: View {
     
     @StateObject private var viewModel = UsageStatsViewModel()
+    @State private var showPaywall = false
     
     var body: some View {
         List {
-            // ✅ CURRENT USAGE
+            // CURRENT USAGE
             Section {
                 HStack {
                     VStack(alignment: .leading, spacing: 4) {
@@ -27,33 +27,50 @@ struct UsageStatsView: View {
                             ProgressView()
                                 .scaleEffect(0.8)
                         } else {
-                            Text("\(viewModel.summariesUsed) / \(viewModel.summariesLimit)")
+                            // Pro users see "7 / 200 per month", free users see "2 / 5"
+                            Text(viewModel.isPro
+                                 ? "\(viewModel.summariesUsed) / \(viewModel.summariesLimit) per month"
+                                 : "\(viewModel.summariesUsed) / \(viewModel.summariesLimit)")
                                 .font(.title2.bold())
                         }
                     }
                     
                     Spacer()
                     
-                    // Progress circle
+                    // Progress circle — only meaningful for free users
                     if !viewModel.isLoading {
-                        ZStack {
-                            Circle()
-                                .stroke(Color.gray.opacity(0.2), lineWidth: 8)
-                                .frame(width: 60, height: 60)
-                            
-                            Circle()
-                                .trim(from: 0, to: viewModel.usageProgress)
-                                .stroke(
-                                    viewModel.isNearLimit ? Color.orange : Color.blue,
-                                    style: StrokeStyle(lineWidth: 8, lineCap: .round)
+                        if viewModel.isPro {
+                            // Pro: show sparkle instead of progress ring
+                            Image(systemName: "infinity")
+                                .font(.system(size: 28, weight: .medium))
+                                .foregroundStyle(
+                                    LinearGradient(
+                                        colors: [.blue, .purple],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
                                 )
                                 .frame(width: 60, height: 60)
-                                .rotationEffect(.degrees(-90))
-                                .animation(.easeInOut, value: viewModel.usageProgress)
-                            
-                            Text("\(Int(viewModel.usageProgress * 100))%")
-                                .font(.caption.bold())
-                                .foregroundColor(viewModel.isNearLimit ? .orange : .blue)
+                        } else {
+                            ZStack {
+                                Circle()
+                                    .stroke(Color.gray.opacity(0.2), lineWidth: 8)
+                                    .frame(width: 60, height: 60)
+                                
+                                Circle()
+                                    .trim(from: 0, to: viewModel.usageProgress)
+                                    .stroke(
+                                        viewModel.isNearLimit ? Color.orange : Color.blue,
+                                        style: StrokeStyle(lineWidth: 8, lineCap: .round)
+                                    )
+                                    .frame(width: 60, height: 60)
+                                    .rotationEffect(.degrees(-90))
+                                    .animation(.easeInOut, value: viewModel.usageProgress)
+                                
+                                Text("\(Int(viewModel.usageProgress * 100))%")
+                                    .font(.caption.bold())
+                                    .foregroundColor(viewModel.isNearLimit ? .orange : .blue)
+                            }
                         }
                     }
                 }
@@ -64,7 +81,9 @@ struct UsageStatsView: View {
                     HStack {
                         Image(systemName: "sparkles")
                             .foregroundColor(.green)
-                        Text("\(viewModel.summariesRemaining) summaries remaining this month")
+                        Text(viewModel.isPro
+                             ? "\(viewModel.summariesRemaining) summaries remaining this month"
+                             : "\(viewModel.summariesRemaining) summaries remaining this month")
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                     }
@@ -72,16 +91,18 @@ struct UsageStatsView: View {
             } header: {
                 Text("This Month")
             } footer: {
-                if viewModel.isNearLimit {
-                    Text("You're running low! Upgrade to Pro for unlimited summaries.")
-                        .foregroundColor(.orange)
-                } else if viewModel.isAtLimit {
-                    Text("Quota reached. Resets next month or upgrade to Pro.")
-                        .foregroundColor(.red)
+                if !viewModel.isPro {
+                    if viewModel.isNearLimit {
+                        Text("You're running low! Upgrade to Pro for unlimited summaries.")
+                            .foregroundColor(.orange)
+                    } else if viewModel.isAtLimit {
+                        Text("Quota reached. Resets next month or upgrade to Pro.")
+                            .foregroundColor(.red)
+                    }
                 }
             }
             
-            // ✅ SUBSCRIPTION TIER
+            // SUBSCRIPTION TIER
             Section {
                 HStack {
                     Image(systemName: viewModel.isPro ? "crown.fill" : "person.fill")
@@ -93,16 +114,17 @@ struct UsageStatsView: View {
                     Spacer()
                     
                     if !viewModel.isPro {
-                        NavigationLink(destination: UpgradeView()) {
-                            Text("Upgrade")
+                        Button("Upgrade") {
+                            showPaywall = true
                         }
+                        .foregroundStyle(.blue)
                     }
                 }
             } header: {
                 Text("Subscription")
             }
             
-            // ✅ PERIOD INFO
+            // PERIOD INFO
             Section {
                 HStack {
                     Text("Current Period")
@@ -121,7 +143,7 @@ struct UsageStatsView: View {
                 Text("Billing Period")
             }
             
-            // ✅ ERROR STATE
+            // ERROR STATE
             if let error = viewModel.error {
                 Section {
                     HStack {
@@ -141,6 +163,9 @@ struct UsageStatsView: View {
         }
         .task {
             await viewModel.loadUsage()
+        }
+        .sheet(isPresented: $showPaywall) {
+            PaywallView()
         }
     }
 }
@@ -165,7 +190,7 @@ class UsageStatsViewModel: ObservableObject {
     
     var usageProgress: Double {
         guard summariesLimit > 0 else { return 0 }
-        return Double(summariesUsed) / Double(summariesLimit)
+        return min(1.0, Double(summariesUsed) / Double(summariesLimit))
     }
     
     var isNearLimit: Bool {
@@ -177,17 +202,14 @@ class UsageStatsViewModel: ObservableObject {
     }
     
     var resetDate: String {
-        // Next month, 1st day
         let calendar = Calendar.current
         let now = Date()
-        
         if let nextMonth = calendar.date(byAdding: .month, value: 1, to: now),
            let firstDay = calendar.date(from: calendar.dateComponents([.year, .month], from: nextMonth)) {
             let formatter = DateFormatter()
             formatter.dateStyle = .medium
             return formatter.string(from: firstDay)
         }
-        
         return "Next month"
     }
     
@@ -249,74 +271,6 @@ enum UsageError: LocalizedError {
             return "Please sign in to view usage"
         case .requestFailed:
             return "Failed to load usage stats"
-        }
-    }
-}
-
-// ============================================
-// MARK: - Upgrade View (Placeholder)
-// ============================================
-
-struct UpgradeView: View {
-    var body: some View {
-        VStack(spacing: 24) {
-            Image(systemName: "crown.fill")
-                .font(.system(size: 60))
-                .foregroundStyle(
-                    LinearGradient(
-                        colors: [.yellow, .orange],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-            
-            Text("Upgrade to Pro")
-                .font(.title.bold())
-            
-            VStack(alignment: .leading, spacing: 12) {
-                FeatureRow(icon: "infinity", text: "Unlimited summaries")
-                FeatureRow(icon: "person.2.fill", text: "Unlimited character analysis")
-                FeatureRow(icon: "books.vertical.fill", text: "Unlimited books")
-                FeatureRow(icon: "sparkles", text: "Priority support")
-            }
-            .padding()
-            .background(Color.blue.opacity(0.1))
-            .cornerRadius(12)
-            
-            Spacer()
-            
-            Button {
-                // TODO: Implement IAP
-            } label: {
-                Text("Coming Soon")
-                    .font(.headline)
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color.gray)
-                    .cornerRadius(12)
-            }
-            .disabled(true)
-        }
-        .padding()
-        .navigationTitle("Pro")
-        .navigationBarTitleDisplayMode(.inline)
-    }
-}
-
-struct FeatureRow: View {
-    let icon: String
-    let text: String
-    
-    var body: some View {
-        HStack {
-            Image(systemName: icon)
-                .foregroundColor(.blue)
-                .frame(width: 24)
-            Text(text)
-            Spacer()
-            Image(systemName: "checkmark.circle.fill")
-                .foregroundColor(.green)
         }
     }
 }

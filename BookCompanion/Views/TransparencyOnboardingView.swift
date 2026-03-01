@@ -120,7 +120,7 @@ struct TransparencyOnboardingView: View {
                             ),
                             TransparencyItem(
                                 label: "Account deletion",
-                                detail: "Email shree.mandlekar@gmail.com at any time to delete your account and all associated data."
+                                detail: "Email vivanyagroup@gmail.com at any time to delete your account and all associated data."
                             ),
                             TransparencyItem(
                                 label: "UK GDPR",
