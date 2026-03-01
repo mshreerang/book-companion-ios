@@ -7,7 +7,6 @@
 
 import SwiftUI
 import RevenueCat
-import Combine
 
 // MARK: - PaywallView
 
@@ -147,13 +146,6 @@ struct PaywallView: View {
                 .background(Color(.systemGray6))
                 .cornerRadius(12)
                 .padding(.horizontal, 24)
-
-                if let subtitle = selectedPriceSubtitle {
-                    Text(subtitle)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                }
             }
         }
         .padding(.bottom, 16)
@@ -207,17 +199,26 @@ struct PaywallView: View {
         }
     }
 
-    // CTA label matches what Apple will show at checkout
+    // CTA label — explicitly states trial duration AND price after trial (Apple 3.1.2)
     private var ctaButtonLabel: String {
         guard let pkg = selectedPackage else { return "Start Free Trial" }
-        if let intro = pkg.storeProduct.introductoryDiscount, intro.price > 0 {
-            if selectedPlan == .annual {
-                return "Start 1 Year at \(intro.localizedPriceString)"
+        let price = pkg.storeProduct.localizedPriceString
+        let period = selectedPlan == .annual ? "year" : "month"
+        if let intro = pkg.storeProduct.introductoryDiscount {
+            if intro.price == 0 {
+                // Free trial
+                let days = intro.subscriptionPeriod.value
+                return "Try Free for \(days) Days, then \(price)/\(period)"
             } else {
-                return "Start 3 Months at \(intro.localizedPriceString)/mo"
+                // Paid intro offer
+                if selectedPlan == .annual {
+                    return "Start 1 Year at \(intro.localizedPriceString), then \(price)/year"
+                } else {
+                    return "Start at \(intro.localizedPriceString)/mo, then \(price)/month"
+                }
             }
         }
-        return "Start 7-Day Free Trial"
+        return "Subscribe for \(price)/\(period)"
     }
 
     // MARK: - Plan Button (with Best Value badge)
@@ -264,12 +265,16 @@ struct PaywallView: View {
                         ProgressView().tint(.white)
                     } else {
                         Text(ctaButtonLabel)
-                            .font(.headline)
+                            .font(.system(size: 17, weight: .semibold))
                             .foregroundStyle(.white)
+                            .multilineTextAlignment(.center)
+                            .lineLimit(2)
+                            .minimumScaleFactor(0.85)
                     }
                 }
                 .frame(maxWidth: .infinity)
-                .padding(16)
+                .padding(.vertical, 16)
+                .padding(.horizontal, 12)
                 .background(LinearGradient(
                     colors: [.blue, .purple],
                     startPoint: .leading,
@@ -304,24 +309,39 @@ struct PaywallView: View {
         .padding(.bottom, 16)
     }
 
-    // MARK: - Legal Footer (Apple required)
+    // MARK: - Legal Footer (Apple Guideline 3.1.2 compliant)
 
     private var legalFooter: some View {
-        VStack(spacing: 8) {
-            Text("Subscription automatically renews unless cancelled at least 24 hours before the end of the current period. Manage or cancel in your Apple ID Account Settings.")
+        VStack(spacing: 10) {
+
+            // Price-after-trial clarity — shown when a package is selected
+            if let subtitle = selectedPriceSubtitle {
+                Text(subtitle)
+                    .font(.caption)
+                    .foregroundStyle(.primary.opacity(0.75))
+                    .multilineTextAlignment(.center)
+                    .fontWeight(.medium)
+            }
+
+            // Apple-required legal paragraph
+            Text("Payment will be charged to your Apple ID account at the confirmation of purchase. Subscription automatically renews unless it is cancelled at least 24 hours before the end of the current period. You can manage and cancel your subscriptions by going to your App Store account settings after purchase.")
                 .font(.caption2)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
 
+            // Privacy Policy & Terms — must be tappable links, not plain text
             HStack(spacing: 16) {
                 Link("Privacy Policy",
-                     destination: URL(string: "https://mshreerang.github.io/book-companion-ios/privacy.html")!)
+                     destination: URL(string: "https://mshreerang.github.io/book-companion-ios/privacy-policy.html")!)
+                Text("·").foregroundStyle(.secondary)
                 Link("Terms of Use",
-                     destination: URL(string: "https://mshreerang.github.io/book-companion-ios/terms.html")!)
+                     destination: URL(string: "https://mshreerang.github.io/book-companion-ios/terms-of-use.html")!)
             }
             .font(.caption2)
+            .foregroundStyle(.blue)
         }
         .padding(.horizontal, 24)
+        .padding(.bottom, 8)
     }
 
     // MARK: - Actions
