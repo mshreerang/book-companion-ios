@@ -45,7 +45,6 @@ struct ProgressInputView: View {
                     chapter: viewModel.selectedChapter,
                     language: viewModel.selectedLanguage,
                     length: viewModel.selectedLength,
-                    makeCharactersViewModel: makeCharactersViewModel
                 )
                 
                 // Settings (Collapsible)
@@ -240,7 +239,8 @@ struct PrimaryActionButton: View {
                 chapter: chapter,
                 bookTitle: book.title,
                 author: book.author,
-                makeCharactersViewModel: makeCharactersViewModel  // ✅ ADD THIS
+                book: book,
+                language: language
             )
             .id(chapter)
         } label: {
@@ -279,20 +279,21 @@ struct PrimaryActionButton: View {
 }
 
 // MARK: - Secondary Action Button
-
 struct SecondaryActionButton: View {
     let book: Book
     let chapter: Int
     let language: Language
     let length: SummaryLength
-    let makeCharactersViewModel: (Book, Language) -> CharactersViewModel
+    
+    // ✅ REMOVED: Don't need makeCharactersViewModel anymore
     
     var body: some View {
         NavigationLink {
-            CharactersLoadingView(
-                viewModel: makeCharactersViewModel(book, language),
+            // ✅ NEW: Use CharacterCardsGridView instead
+            CharacterCardsGridView(
+                book: book,
                 chapter: chapter,
-                length: length
+                language: language.rawValue
             )
         } label: {
             HStack {

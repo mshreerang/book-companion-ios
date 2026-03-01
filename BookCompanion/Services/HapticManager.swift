@@ -5,6 +5,7 @@
 //  Created on 15/02/2026.
 //
 import UIKit
+import Combine
 
 enum HapticManager {
     

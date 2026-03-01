@@ -26,8 +26,18 @@ static let appSecret = "ujxlv2MWUY/EyRV+0Rc20eGjca8GqN5V3Q5oEnuedjM="
     static let appVersion = "1.0.0"
     static let appName = "BookCompanion"
     
-    // MARK: - Limits
+    // MARK: - RevenueCat
+
+    /// Public iOS API key from RevenueCat dashboard → API Keys.
+    /// This is safe to ship in the binary — it is not a secret.
+    static let revenueCatAPIKey = "ho8BCwkUJ4xQY/2wwTuXdw51v/VT7I"
     
     static let maxChapters = 500
-    static let summaryTimeoutSeconds: Double = 30
+
+    // Summary generation can take up to 2 minutes for long books.
+    static let summaryTimeoutSeconds: Double = 120
+
+    // Chat responses are short (1–3 sentences). 60s is generous;
+    // a stalled stream surfaces an error instead of hanging silently.
+    static let chatTimeoutSeconds: Double = 60
 }

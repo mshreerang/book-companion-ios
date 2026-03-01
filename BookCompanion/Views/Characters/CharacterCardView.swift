@@ -1,84 +1,138 @@
 import SwiftUI
 
+// CharacterCardView is now the EXPANDED card only.
+// It lives in the overlay layer of CharacterCardsGridView.
+// The grid thumbnail is just CharacterCardFront + matchedGeometryEffect.
+
 struct CharacterCardView: View {
     let name: String
-    @ObservedObject var viewModel: CharacterCardsViewModel  // ✅ FIXED: Use parent's viewModel
+    let book: Book
+    let chapter: Int
+    @ObservedObject var viewModel: CharacterCardsViewModel
+    var cardNamespace: Namespace.ID
+    var onDismiss: () -> Void
+
     @State private var isFlipped = false
     @State private var character: CharacterCard?
     @State private var isLoadingDetails = false
-    
+    @State private var showChat = false
+
     var body: some View {
         ZStack {
-            // Back side (details)
+            // Back face — shown when flipped
             if isFlipped {
                 CharacterCardBack(
                     character: character,
-                    isLoading: isLoadingDetails
+                    isLoading: isLoadingDetails,
+                    book: book,
+                    chapter: chapter,
+                    showChat: $showChat
                 )
-                .rotation3DEffect(.degrees(180), axis: (x: 0, y: 1, z: 0))
+                .rotation3DEffect(.degrees(0), axis: (x: 0, y: 1, z: 0))
+                // Back face starts at 180° in the unflipped state
+                .rotation3DEffect(
+                    .degrees(isFlipped ? 0 : -180),
+                    axis: (x: 0, y: 1, z: 0)
+                )
+                .opacity(isFlipped ? 1 : 0)
             }
-            
-            // Front side (name only)
+
+            // Front face — hidden when flipped
             if !isFlipped {
                 CharacterCardFront(name: name)
+                    .rotation3DEffect(
+                        .degrees(isFlipped ? 180 : 0),
+                        axis: (x: 0, y: 1, z: 0)
+                    )
+                    .opacity(isFlipped ? 0 : 1)
+            }
+
+            // Close button — always on top
+            VStack {
+                HStack {
+                    Spacer()
+                    Button {
+                        onDismiss()
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.title2)
+                            .foregroundStyle(.white, Color.black.opacity(0.3))
+                            .padding(12)
+                    }
+                }
+                Spacer()
             }
         }
-        .rotation3DEffect(
-            .degrees(isFlipped ? 180 : 0),
-            axis: (x: 0, y: 1, z: 0)
-        )
-        .onTapGesture {
-            handleTap()
+        .cornerRadius(20)
+        .shadow(color: .black.opacity(0.3), radius: 24, x: 0, y: 12)
+        .onAppear {
+            // Brief pause so the zoom animation completes before the flip starts
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                withAnimation(.spring(response: 0.55, dampingFraction: 0.75)) {
+                    isFlipped = true
+                }
+                loadDetailsIfNeeded()
+            }
+        }
+        .sheet(isPresented: $showChat) {
+            if FeatureFlags.characterChat, let character = character {
+                CharacterChatView(
+                    character: character,
+                    book: book,
+                    chapter: chapter,
+                    language: book.language
+                )
+            }
         }
     }
-    
-    private func handleTap() {
-        // ✅ IMPROVEMENT #4: Haptic feedback for premium feel
-        let impact = UIImpactFeedbackGenerator(style: .medium)
-        impact.impactOccurred()
-        
-        withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
-            isFlipped.toggle()
-        }
-        
-        // Load details when flipping to back
-        if isFlipped && character == nil {
-            loadDetails()
-        }
-    }
-    
-    private func loadDetails() {
-        // ✅ IMPROVEMENT #3: Check cache first (viewModel handles this)
+
+    private func loadDetailsIfNeeded() {
         if let cached = viewModel.detailsCache[name] {
-            self.character = cached
+            character = cached
             return
         }
-        
         isLoadingDetails = true
-        
         Task {
             let result = await viewModel.loadDetails(for: name)
-            
             await MainActor.run {
-                self.character = result
-                self.isLoadingDetails = false
+                character = result
+                isLoadingDetails = false
             }
         }
     }
 }
 
 #Preview {
-    CharacterCardView(
-        name: "Harry Potter",
-        viewModel: CharacterCardsViewModel(
+    @Previewable @Namespace var ns
+    // Preview shows the expanded card directly
+    ZStack {
+        Color.black.opacity(0.4).ignoresSafeArea()
+        CharacterCardView(
+            name: "Hermione Granger",
             book: Book(
                 id: UUID(),
-                title: "Harry Potter and the Philosopher's Stone",
-                author: "J.K. Rowling"
+                title: "Harry Potter and the Goblet of Fire",
+                author: "J.K. Rowling",
+                language: .english,
+                totalChapters: 37,
+                coverImageURL: nil,
+                createdAt: Date()
             ),
-            chapter: 11
+            chapter: 33,
+            viewModel: CharacterCardsViewModel(
+                book: Book(
+                    id: UUID(),
+                    title: "Harry Potter and the Goblet of Fire",
+                    author: "J.K. Rowling",
+                    language: .english,
+                    totalChapters: 37,
+                    createdAt: Date()
+                ),
+                chapter: 33
+            ),
+            cardNamespace: ns,
+            onDismiss: {}
         )
-    )
-    .frame(width: 160, height: 220)
-    .padding()
+        .padding(20)
+    }
 }

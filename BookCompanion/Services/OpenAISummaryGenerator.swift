@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import Combine
 
 final class OpenAISummaryGenerator: SummaryGenerator {
 
@@ -144,7 +145,6 @@ final class OpenAISummaryGenerator: SummaryGenerator {
             throw AIError.requestFailed
         }
         
-        // ✅ Fixed: Proper switch statement
         switch httpResponse.statusCode {
         case 200...299:
             return data
@@ -191,7 +191,6 @@ final class OpenAISummaryGenerator: SummaryGenerator {
             throw AIError.invalidResponse
         }
         
-        // Parse the JSON array from the content
         guard let charactersArray = try JSONSerialization.jsonObject(with: contentData) as? [[String: Any]] else {
             throw AIError.invalidResponse
         }
@@ -220,7 +219,12 @@ final class OpenAISummaryGenerator: SummaryGenerator {
     }
 }
 
-// MARK: - Errors
+// MARK: - AIError
+//
+// Shared across the app. SummaryViewModel, CharacterChatViewModel,
+// and CharactersLoadingView all catch these cases.
+//
+// ⚠️  Do not define AIError anywhere else — one definition, here.
 
 enum AIError: LocalizedError {
     case requestFailed
@@ -228,7 +232,15 @@ enum AIError: LocalizedError {
     case networkError(Error)
     case unauthorized
     case rateLimited
-    
+    case quotaExceeded(String)
+
+    // Thrown by CharacterChatViewModel when the three-tier moderation
+    // pipeline blocks a message (Tier 1) or replaces a response (Tier 3).
+    // The associated String carries the safe refusal copy from the server.
+    case safetyBlock(String)
+
+    // MARK: errorDescription
+
     var errorDescription: String? {
         switch self {
         case .requestFailed:
@@ -241,9 +253,15 @@ enum AIError: LocalizedError {
             return "Invalid API key. Please check your settings."
         case .rateLimited:
             return "Rate limit exceeded. Please try again in a moment."
+        case .quotaExceeded(let message):
+            return message
+        case .safetyBlock(let message):
+            return message
         }
     }
-    
+
+    // MARK: recoverySuggestion
+
     var recoverySuggestion: String? {
         switch self {
         case .unauthorized:
@@ -252,8 +270,12 @@ enum AIError: LocalizedError {
             return "Check your internet connection and try again, or switch to Offline mode in Settings."
         case .rateLimited:
             return "Wait a moment before trying again."
+        case .quotaExceeded:
+            return "Upgrade to Pro for unlimited summaries, or wait until next month."
         case .invalidResponse:
             return "Try regenerating the summary."
+        case .safetyBlock:
+            return nil  // No recovery CTA — the refusal message is self-explanatory.
         }
     }
 }

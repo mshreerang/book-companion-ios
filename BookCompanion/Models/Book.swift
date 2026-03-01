@@ -12,6 +12,7 @@ struct Book: Identifiable, Codable {
     let author: String
     let language: Language
     let totalChapters: Int
+    let pageCount: Int?
     let coverImageURL: String?
     let createdAt: Date
     
@@ -27,6 +28,11 @@ struct Book: Identifiable, Codable {
     var chaptersInfo: String {
         "\(totalChapters) chapters"
     }
+    // ✅ ADDED: Page count info
+      var pagesInfo: String? {
+          guard let pages = pageCount else { return nil }
+          return "\(pages) pages"
+      }
     
     // Progress percentage (0.0 to 1.0)
     var progressPercentage: Double {
@@ -51,7 +57,7 @@ struct Book: Identifiable, Codable {
     
     // Custom coding keys to exclude readingProgress from encoding/decoding
     enum CodingKeys: String, CodingKey {
-        case id, title, author, language, totalChapters, coverImageURL, createdAt
+        case id, title, author, language, totalChapters,pageCount, coverImageURL, createdAt
     }
     
     // Custom decoder to ensure readingProgress is properly initialized
@@ -62,6 +68,7 @@ struct Book: Identifiable, Codable {
         author = try container.decode(String.self, forKey: .author)
         language = try container.decode(Language.self, forKey: .language)
         totalChapters = try container.decode(Int.self, forKey: .totalChapters)
+        pageCount = try container.decodeIfPresent(Int.self, forKey: .pageCount)
         coverImageURL = try container.decodeIfPresent(String.self, forKey: .coverImageURL)
         createdAt = try container.decode(Date.self, forKey: .createdAt)
         
@@ -76,6 +83,7 @@ struct Book: Identifiable, Codable {
         author: String,
         language: Language,
         totalChapters: Int,
+        pageCount: Int? = nil,
         coverImageURL: String? = nil,
         createdAt: Date,
         readingProgress: ReadingProgress? = nil
@@ -85,6 +93,7 @@ struct Book: Identifiable, Codable {
         self.author = author
         self.language = language
         self.totalChapters = totalChapters
+        self.pageCount = pageCount
         self.coverImageURL = coverImageURL
         self.createdAt = createdAt
         self.readingProgress = readingProgress

@@ -34,6 +34,10 @@ struct BookSearchResult: Identifiable, Equatable {
             return .hindi
         } else if lang.contains("mr") || lang == "marathi" {
             return .marathi
+        } else if lang.contains("es") || lang == "spanish" {
+            return .spanish
+        } else if lang.contains("de") || lang == "german" {
+            return .german
         } else {
             return .english
         }

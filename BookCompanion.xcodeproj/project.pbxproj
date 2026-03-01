@@ -7,7 +7,14 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		F49895FA2F453BC700BC58DE /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = F49895F92F453BC700BC58DE /* Supabase */; };
+		F40CF3902F53B0FB00DFAD3A /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = F40CF38F2F53B0FB00DFAD3A /* RevenueCat */; };
+		F40CF3922F53B12600DFAD3A /* RevenueCatUI in Frameworks */ = {isa = PBXBuildFile; productRef = F40CF3912F53B12600DFAD3A /* RevenueCatUI */; };
+		F40CF3982F544E4D00DFAD3A /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F40CF3972F544E4D00DFAD3A /* StoreKit.framework */; };
+		F4B5CD722F4E695700B13A38 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = F4B5CD712F4E695700B13A38 /* Supabase */; };
+		F4B5CD752F4E69ED00B13A38 /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = F4B5CD742F4E69ED00B13A38 /* Sentry */; };
+		F4BB54902F4E663600391D3F /* (null) in Frameworks */ = {isa = PBXBuildFile; };
+		F4BB54912F4E663600391D3F /* (null) in Frameworks */ = {isa = PBXBuildFile; };
+		F4D81A6B2F50F63A00D250B8 /* PostHog in Frameworks */ = {isa = PBXBuildFile; productRef = F4D81A6A2F50F63A00D250B8 /* PostHog */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -28,6 +35,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		F40CF3972F544E4D00DFAD3A /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
 		F49C0F9A2F1D94BE00B17BBE /* BookCompanion.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BookCompanion.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		F49C0FA72F1D94C000B17BBE /* BookCompanionTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BookCompanionTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		F49C0FB12F1D94C000B17BBE /* BookCompanionUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BookCompanionUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -38,28 +46,16 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
-				"PROJECT_STATUS.md ",
 			);
 			target = F49C0F992F1D94BE00B17BBE /* BookCompanion */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
-
-/* Begin PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */
-		F48AA65B2F2EC3CE00AE716A /* Exceptions for "BookCompanion" folder in "Compile Sources" phase from "BookCompanion" target */ = {
-			isa = PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet;
-			buildPhase = F49C0F962F1D94BE00B17BBE /* Sources */;
-			membershipExceptions = (
-				"PROJECT_STATUS.md ",
-			);
-		};
-/* End PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		F49C0F9C2F1D94BE00B17BBE /* BookCompanion */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
 				F48AA6582F2EC20500AE716A /* Exceptions for "BookCompanion" folder in "BookCompanion" target */,
-				F48AA65B2F2EC3CE00AE716A /* Exceptions for "BookCompanion" folder in "Compile Sources" phase from "BookCompanion" target */,
 			);
 			path = BookCompanion;
 			sourceTree = "<group>";
@@ -81,7 +77,12 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				F49895FA2F453BC700BC58DE /* Supabase in Frameworks */,
+				F40CF3902F53B0FB00DFAD3A /* RevenueCat in Frameworks */,
+				F4D81A6B2F50F63A00D250B8 /* PostHog in Frameworks */,
+				F4B5CD722F4E695700B13A38 /* Supabase in Frameworks */,
+				F40CF3982F544E4D00DFAD3A /* StoreKit.framework in Frameworks */,
+				F40CF3922F53B12600DFAD3A /* RevenueCatUI in Frameworks */,
+				F4B5CD752F4E69ED00B13A38 /* Sentry in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -89,6 +90,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F4BB54902F4E663600391D3F /* (null) in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -96,6 +98,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F4BB54912F4E663600391D3F /* (null) in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -105,6 +108,7 @@
 		F49895F82F453BC700BC58DE /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				F40CF3972F544E4D00DFAD3A /* StoreKit.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -140,6 +144,7 @@
 				F49C0F962F1D94BE00B17BBE /* Sources */,
 				F49C0F972F1D94BE00B17BBE /* Frameworks */,
 				F49C0F982F1D94BE00B17BBE /* Resources */,
+				553E97F328A04D5383DE9EB9 /* Upload Debug Symbols to Sentry */,
 			);
 			buildRules = (
 			);
@@ -150,7 +155,11 @@
 			);
 			name = BookCompanion;
 			packageProductDependencies = (
-				F49895F92F453BC700BC58DE /* Supabase */,
+				F4B5CD712F4E695700B13A38 /* Supabase */,
+				F4B5CD742F4E69ED00B13A38 /* Sentry */,
+				F4D81A6A2F50F63A00D250B8 /* PostHog */,
+				F40CF38F2F53B0FB00DFAD3A /* RevenueCat */,
+				F40CF3912F53B12600DFAD3A /* RevenueCatUI */,
 			);
 			productName = BookCompanion;
 			productReference = F49C0F9A2F1D94BE00B17BBE /* BookCompanion.app */;
@@ -235,7 +244,10 @@
 			mainGroup = F49C0F912F1D94BE00B17BBE;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				F49895F72F453BAC00BC58DE /* XCRemoteSwiftPackageReference "supabase-swift" */,
+				F4B5CD662F4E695700B13A38 /* XCRemoteSwiftPackageReference "supabase-swift" */,
+				F4B5CD732F4E69ED00B13A38 /* XCRemoteSwiftPackageReference "sentry-cocoa" */,
+				F4D81A692F50F61700D250B8 /* XCRemoteSwiftPackageReference "posthog-ios" */,
+				F40CF38E2F53B0EA00DFAD3A /* XCRemoteSwiftPackageReference "purchases-ios" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = F49C0F9B2F1D94BE00B17BBE /* Products */;
@@ -272,6 +284,25 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		553E97F328A04D5383DE9EB9 /* Upload Debug Symbols to Sentry */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				"${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}/Contents/Resources/DWARF/${TARGET_NAME}",
+			);
+			name = "Upload Debug Symbols to Sentry";
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "# This script is responsible for uploading debug symbols and source context for Sentry.\nif which sentry-cli >/dev/null; then\n  export SENTRY_ORG=vivaan-labs\n  export SENTRY_PROJECT=bookcompanion\n  ERROR=$(sentry-cli debug-files upload --include-sources \"$DWARF_DSYM_FOLDER_PATH\" 2>&1 >/dev/null)\n  if [ ! $? -eq 0 ]; then\n    echo \"warning: sentry-cli - $ERROR\"\n  fi\nelse\n  echo \"warning: sentry-cli not installed, download from https://github.com/getsentry/sentry-cli/releases\"\nfi\n";
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		F49C0F962F1D94BE00B17BBE /* Sources */ = {
@@ -436,13 +467,16 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = BookCompanion/BookCompanion.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEAD_CODE_STRIPPING = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = JC8RCB5995;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
@@ -482,13 +516,16 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = BookCompanion/BookCompanion.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEAD_CODE_STRIPPING = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = JC8RCB5995;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
@@ -671,7 +708,15 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		F49895F72F453BAC00BC58DE /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
+		F40CF38E2F53B0EA00DFAD3A /* XCRemoteSwiftPackageReference "purchases-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/RevenueCat/purchases-ios";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 5.60.0;
+			};
+		};
+		F4B5CD662F4E695700B13A38 /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/supabase/supabase-swift";
 			requirement = {
@@ -679,13 +724,49 @@
 				minimumVersion = 2.5.1;
 			};
 		};
+		F4B5CD732F4E69ED00B13A38 /* XCRemoteSwiftPackageReference "sentry-cocoa" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/getsentry/sentry-cocoa";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 9.5.0;
+			};
+		};
+		F4D81A692F50F61700D250B8 /* XCRemoteSwiftPackageReference "posthog-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/PostHog/posthog-ios";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 3.41.2;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		F49895F92F453BC700BC58DE /* Supabase */ = {
+		F40CF38F2F53B0FB00DFAD3A /* RevenueCat */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = F49895F72F453BAC00BC58DE /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			package = F40CF38E2F53B0EA00DFAD3A /* XCRemoteSwiftPackageReference "purchases-ios" */;
+			productName = RevenueCat;
+		};
+		F40CF3912F53B12600DFAD3A /* RevenueCatUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F40CF38E2F53B0EA00DFAD3A /* XCRemoteSwiftPackageReference "purchases-ios" */;
+			productName = RevenueCatUI;
+		};
+		F4B5CD712F4E695700B13A38 /* Supabase */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F4B5CD662F4E695700B13A38 /* XCRemoteSwiftPackageReference "supabase-swift" */;
 			productName = Supabase;
+		};
+		F4B5CD742F4E69ED00B13A38 /* Sentry */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F4B5CD732F4E69ED00B13A38 /* XCRemoteSwiftPackageReference "sentry-cocoa" */;
+			productName = Sentry;
+		};
+		F4D81A6A2F50F63A00D250B8 /* PostHog */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F4D81A692F50F61700D250B8 /* XCRemoteSwiftPackageReference "posthog-ios" */;
+			productName = PostHog;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

@@ -1,20 +1,19 @@
 import SwiftUI
 
 struct SummaryView: View {
-
     @StateObject private var viewModel: SummaryViewModel
-    @StateObject private var ttsManager = TextToSpeechManager.shared
+    
     let chapter: Int
     let bookTitle: String
     let author: String
+    let book: Book
+    let language: Language
     
-    // ✅ NEW: Pass these from parent view for character loading
-    let makeCharactersViewModel: (Book, Language) -> CharactersViewModel
-    
-    // ✅ NEW: Share sheet state
     @State private var showingShareSheet = false
-    
-    // ✅ NEW: Random loading message (set once per view)
+    @EnvironmentObject private var storeManager: StoreManager
+    @ObservedObject private var ttsManager = TextToSpeechManager.shared
+
+    // Random loading message for variety during generation
     private let loadingMessage = LoadingMessages.randomSummaryMessage()
 
     init(
@@ -22,179 +21,60 @@ struct SummaryView: View {
         chapter: Int,
         bookTitle: String,
         author: String,
-        makeCharactersViewModel: @escaping (Book, Language) -> CharactersViewModel
+        book: Book,
+        language: Language
     ) {
         _viewModel = StateObject(wrappedValue: viewModel)
         self.chapter = chapter
         self.bookTitle = bookTitle
         self.author = author
-        self.makeCharactersViewModel = makeCharactersViewModel
+        self.book = book
+        self.language = language
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 0) {
             
-            // Only show badges when NOT in error/loading state
+            // Quota nudge banner — shown when 1 free summary remains
+            if viewModel.showQuotaNudge {
+                QuotaNudgeBanner(isShowing: $viewModel.showQuotaNudge)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                    .animation(.spring(response: 0.4, dampingFraction: 0.8), value: viewModel.showQuotaNudge)
+            }
+
+            // ✅ STATUS BADGES
             if viewModel.error == nil && !viewModel.isLoading {
-                Text("Safe up to Chapter \(chapter)")
-                    .font(.caption)
-                    .padding(6)
-                    .background(Color.green.opacity(0.15))
-                    .cornerRadius(6)
-                
-                if viewModel.isCached {
-                    Text("Previously generated")
-                        .font(.caption2)
+                HStack(spacing: 8) {
+                    Text("Safe up to Chapter \(chapter)")
+                        .font(.caption.bold())
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
-                        .background(Color.blue.opacity(0.15))
-                        .foregroundColor(.blue)
+                        .background(Color.green.opacity(0.15))
+                        .foregroundColor(.green)
                         .cornerRadius(6)
-                }
-                
-                HStack {
-                    Spacer()
                     
-                    Button {
-                        Task {
-                            await viewModel.regenerate(chapter: chapter)
-                        }
-                    } label: {
-                        Text("Regenerate summary")
-                            .font(.caption)
+                    if viewModel.isCached {
+                        Text("Cached")
+                            .font(.caption.bold())
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Color.blue.opacity(0.1))
+                            .foregroundColor(.blue)
+                            .cornerRadius(6)
                     }
-                    .disabled(viewModel.isLoading)
-                    
-                    Spacer()
                 }
+                .padding(.horizontal)
+                .padding(.top, 8)
             }
             
-            // ✅ STREAMING OR LOADING STATE
-            if viewModel.isLoading {
-                if viewModel.isStreaming && !viewModel.streamingText.isEmpty {
-                    // ✅ SHOW STREAMING TEXT
-                    ScrollView {
-                        Text(viewModel.streamingText)
-                            .font(.body)
-                            .padding()
-                            .textSelection(.enabled)
-                    }
-                } else {
-                    // ✅ SHOW LOADING MESSAGE + SKELETON WHILE WAITING FOR FIRST CHUNK
-                    VStack(spacing: 24) {
-                        // ✅ FUN LOADING MESSAGE
-                        VStack(spacing: 12) {
-                            ProgressView()
-                                .scaleEffect(1.2)
-                            
-                            Text(loadingMessage)
-                                .font(.headline)
-                                .foregroundColor(.secondary)
-                                .multilineTextAlignment(.center)
-                        }
-                        .padding(.top, 40)
-                        
-                        // SKELETON PREVIEW
-                        ScrollView {
-                            VStack(alignment: .leading, spacing: 16) {
-                                // Chapter indicator skeleton
-                                SkeletonBox(width: 180, height: 12, cornerRadius: 6)
-                                
-                                Spacer().frame(height: 8)
-                                
-                                // Summary content skeleton
-                                SummarySkeleton()
-                            }
-                            .padding()
-                        }
-                    }
-                }
-            } else if let error = viewModel.error {
-                // ✅ ERROR STATE
-                VStack {
-                    Spacer()
-                    VStack(spacing: 16) {
-                        // Error icon with animation
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .font(.system(size: 60))
-                            .foregroundStyle(
-                                LinearGradient(
-                                    colors: [Color.orange, Color.red],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                            .shadow(color: .orange.opacity(0.3), radius: 10, x: 0, y: 5)
-                        
-                        VStack(spacing: 8) {
-                            Text("Couldn't Generate Summary")
-                                .font(.title3.weight(.semibold))
-                            
-                            Text(error.localizedDescription)
-                                .font(.body)
-                                .foregroundColor(.secondary)
-                                .multilineTextAlignment(.center)
-                                .padding(.horizontal)
-                        }
-                        
-                        // Recovery suggestion
-                        if let aiError = error as? AIError,
-                           let suggestion = aiError.recoverySuggestion {
-                            VStack(spacing: 8) {
-                                Divider()
-                                    .padding(.vertical, 8)
-                                
-                                HStack(spacing: 8) {
-                                    Image(systemName: "lightbulb.fill")
-                                        .foregroundColor(.blue)
-                                    Text(suggestion)
-                                        .font(.subheadline)
-                                        .foregroundColor(.secondary)
-                                }
-                                .padding()
-                                .background(Color.blue.opacity(0.1))
-                                .cornerRadius(12)
-                            }
-                            .padding(.horizontal)
-                        }
-                        
-                        // Try again button
-                        Button {
-                            Task {
-                                await viewModel.generate(chapter: chapter)
-                            }
-                        } label: {
-                            HStack {
-                                Image(systemName: "arrow.clockwise")
-                                Text("Try Again")
-                            }
-                            .font(.headline)
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 24)
-                            .padding(.vertical, 12)
-                            .background(
-                                LinearGradient(
-                                    colors: [Color.blue, Color.purple],
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                )
-                            )
-                            .cornerRadius(12)
-                        }
-                        .padding(.top, 8)
-                    }
-                    .padding()
-                    Spacer()
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                
-            } else if let summary = viewModel.summary {
-                // ✅ SUCCESS STATE - SHOW COMPLETE SUMMARY
-                ScrollView {
-                    Text(summary.content)
-                        .font(.body)
-                        .padding()
-                        .textSelection(.enabled)
+            // ✅ CONTENT AREA
+            Group {
+                if viewModel.isLoading {
+                    loadingContent
+                } else if let error = viewModel.error {
+                    errorView(error)
+                } else if let summary = viewModel.summary {
+                    summaryContent(summary.content)
                 }
             }
         }
@@ -202,103 +82,126 @@ struct SummaryView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
-                HStack(spacing: 16) {
-                    // ✅ NEW: Share button
-                    Button {
-                        HapticManager.lightImpact()
-                        showingShareSheet = true
-                    } label: {
-                        Image(systemName: "square.and.arrow.up")
-                            .font(.title3)
-                    }
-                    .disabled(viewModel.summary == nil)
-                    .accessibilityLabel("Share Summary")
-                    
-                    // TTS Controls (Play/Pause or Stop)
-                    if ttsManager.isSpeaking {
-                        // Show Pause + Stop when playing/paused
-                        Button {
-                            HapticManager.lightImpact()
-                            if ttsManager.isPaused {
-                                ttsManager.resume()
-                            } else {
-                                ttsManager.pause()
-                            }
-                        } label: {
-                            Image(systemName: ttsManager.isPaused ? "play.fill" : "pause.fill")
-                                .font(.title3)
-                        }
-                        .accessibilityLabel(ttsManager.isPaused ? "Resume" : "Pause")
-                        
-                        Button {
-                            HapticManager.lightImpact()
-                            ttsManager.stop()
-                        } label: {
-                            Image(systemName: "stop.fill")
-                                .font(.title3)
-                        }
-                        .accessibilityLabel("Stop")
-                        
-                    } else {
-                        // Show Play when not playing
-                        Button {
-                            HapticManager.lightImpact()
-                            if let summary = viewModel.summary {
-                                ttsManager.speak(text: summary.content, language: summary.language)
-                            }
-                        } label: {
-                            Image(systemName: "speaker.wave.2.fill")
-                                .font(.title3)
-                        }
-                        .disabled(viewModel.summary == nil)
-                        .accessibilityLabel("Listen")
-                    }
-                    
-                    // ✅ FIXED: Characters button navigates to CharactersLoadingView
-                    if let summary = viewModel.summary {
-                        NavigationLink {
-                            CharactersLoadingView(
-                                viewModel: makeCharactersViewModel(
-                                    Book(
-                                        id: summary.bookId,
-                                        title: bookTitle,
-                                        author: author,
-                                        language: summary.language,
-                                        totalChapters: chapter,  // Using chapter as temp value
-                                        coverImageURL: nil,
-                                        createdAt: Date()
-                                    ),
-                                    summary.language
-                                ),
-                                chapter: chapter,
-                                length: summary.length
-                            )
-                        } label: {
-                            Image(systemName: "person.2.fill")
-                                .font(.title3)
-                        }
-                        .accessibilityLabel("Characters")
-                    } else {
-                        // Disabled state when no summary
-                        Image(systemName: "person.2.fill")
-                            .font(.title3)
-                            .foregroundColor(.gray)
-                    }
-                }
+                toolbarButtons
             }
         }
+        // Re-generate if chapter changes
+        .task(id: chapter) {
+            await viewModel.generate(chapter: chapter)
+        }
         .sheet(isPresented: $showingShareSheet) {
-            // ✅ NEW: Share sheet
             if let summary = viewModel.summary {
                 ShareSheet(items: [formatSummaryForSharing(summary)])
             }
         }
-        .task(id: chapter) {
-            await viewModel.generate(chapter: chapter)
+        // Paywall — shown only on explicit 429, never on network errors
+        .sheet(isPresented: $viewModel.showPaywall) {
+            PaywallView(triggerReason: viewModel.paywallTriggerReason)
+                .environmentObject(storeManager)
         }
     }
     
-    // ✅ NEW: Format summary for sharing (with book info)
+    // MARK: - Subviews
+    
+    private func summaryContent(_ content: String) -> some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                // ✅ Parse Markdown but preserve spacing
+                let sections = parseSummaryWithMarkdown(content)
+                ForEach(sections.indices, id: \.self) { index in
+                    let section = sections[index]
+                    Text(section.text)
+                        .font(section.isHeader ? .headline : .body)
+                        .fontWeight(section.isHeader ? .bold : .regular)
+                        .lineSpacing(4)
+                        .textSelection(.enabled)
+                }
+            }
+            .padding()
+        }
+    }
+    
+    // ✅ Helper: Parse summary and handle headers manually
+    private func parseSummaryWithMarkdown(_ content: String) -> [(text: String, isHeader: Bool)] {
+        var result: [(text: String, isHeader: Bool)] = []
+        let lines = content.components(separatedBy: "\n")
+        
+        for line in lines {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            if trimmed.isEmpty { continue }
+            
+            // Check if it's a header (starts with ###)
+            if trimmed.hasPrefix("###") {
+                let headerText = trimmed.replacingOccurrences(of: "###", with: "").trimmingCharacters(in: .whitespaces)
+                result.append((text: headerText, isHeader: true))
+            } else {
+                result.append((text: trimmed, isHeader: false))
+            }
+        }
+        
+        return result
+    }
+
+    private var loadingContent: some View {
+        VStack(spacing: 20) {
+            if !viewModel.streamingText.isEmpty {
+                // ✅ Show streaming text as it arrives
+                summaryContent(viewModel.streamingText)
+            } else {
+                // ✅ Show skeleton while waiting for first chunk
+                SummarySkeleton()
+            }
+        }
+    }
+    
+    private func errorView(_ error: Error) -> some View {
+        VStack(spacing: 16) {
+            Spacer()
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 50))
+                .foregroundColor(.orange)
+            Text("Connection Issue")
+                .font(.headline)
+            Text(error.localizedDescription)
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+            Button("Try Again") {
+                Task { await viewModel.generate(chapter: chapter) }
+            }
+            .buttonStyle(.borderedProminent)
+            Spacer()
+        }
+        .padding()
+    }
+
+    private var toolbarButtons: some View {
+        HStack {
+            // TTS Button
+            if let summary = viewModel.summary {
+                Button {
+                    if ttsManager.isSpeaking {
+                        ttsManager.stop()
+                    } else {
+                        ttsManager.speak(text: summary.content, language: language)  // ✅ FIXED
+                    }
+                } label: {
+                    Image(systemName: ttsManager.isSpeaking ? "stop.fill" : "speaker.wave.2.fill")
+                }
+            }
+            
+            // Share Button
+            Button {
+                showingShareSheet = true
+            } label: {
+                Image(systemName: "square.and.arrow.up")
+            }
+            .disabled(viewModel.summary == nil)
+        }
+    }
+    
+    // MARK: - Helpers
+    
     private func formatSummaryForSharing(_ summary: BookSummary) -> String {
         let header = author.isEmpty
             ? "📖 \(bookTitle)\nChapter \(chapter)"
@@ -315,16 +218,49 @@ struct SummaryView: View {
     }
 }
 
-// ✅ NEW: iOS Share Sheet wrapper
+// MARK: - Quota Nudge Banner
+
+struct QuotaNudgeBanner: View {
+    @Binding var isShowing: Bool
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "exclamationmark.circle.fill")
+                .foregroundStyle(.orange)
+            Text("1 free summary remaining this month — Go Pro for unlimited")
+                .font(.caption)
+                .fontWeight(.medium)
+                .foregroundStyle(.primary)
+            Spacer()
+            Button {
+                withAnimation { isShowing = false }
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(12)
+        .background(.ultraThinMaterial)
+        .cornerRadius(10)
+        .padding(.horizontal, 16)
+        .padding(.top, 8)
+        .onAppear {
+            // Auto-dismiss after 5 seconds
+            DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
+                withAnimation { isShowing = false }
+            }
+        }
+    }
+}
+
+// MARK: - Share Sheet Helper
+
 struct ShareSheet: UIViewControllerRepresentable {
     let items: [Any]
     
     func makeUIViewController(context: Context) -> UIActivityViewController {
-        let controller = UIActivityViewController(
-            activityItems: items,
-            applicationActivities: nil
-        )
-        return controller
+        UIActivityViewController(activityItems: items, applicationActivities: nil)
     }
     
     func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}

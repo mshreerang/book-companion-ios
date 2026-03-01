@@ -9,7 +9,13 @@ struct CharacterCard: Identifiable, Codable {
     var description: String?
     var relationships: String?
     var currentSituation: String?
-    
+    var role: String?
+
+    // Loaded with getDetails — shown as suggested chips in CharacterChatView.
+    // nil on cards loaded via prewarm (fast path); non-nil after full detail fetch.
+    // Codable handles this automatically because it's optional — no CodingKeys needed.
+    var suggestedQuestions: [String]?
+
     // Computed property for display name
     var displayName: String {
         fullName

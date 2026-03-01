@@ -10,9 +10,15 @@ class SummaryViewModel: ObservableObject {
     @Published var error: Error?
     @Published var isCached = false
     
-    // ✅ NEW: Streaming state
+    // Streaming state
     @Published var streamingText = ""
     @Published var isStreaming = false
+
+    // Paywall + quota nudge state
+    // PaywallView is shown ONLY on HTTP 429 — never on any other error.
+    @Published var showPaywall = false
+    @Published var paywallTriggerReason = ""
+    @Published var showQuotaNudge = false
     
     private let book: Book
     private let language: Language
@@ -36,6 +42,18 @@ class SummaryViewModel: ObservableObject {
     
     // ✅ STREAMING GENERATION
     func generate(chapter: Int) async {
+        // ✅ ANALYTICS: Track summary request
+        AnalyticsManager.shared.track(
+            event: "summary_requested",
+            properties: [
+                "book_title": book.title,
+                "author": book.author,
+                "chapter": chapter,
+                "language": language.displayName,
+                "length": length.rawValue
+            ]
+        )
+        
         isLoading = true
         isStreaming = true
         streamingText = ""
@@ -44,6 +62,15 @@ class SummaryViewModel: ObservableObject {
         
         // Check cache first
         if let cachedSummary = loadCachedSummary(chapter: chapter) {
+            // ✅ ANALYTICS: Track cache hit
+            AnalyticsManager.shared.track(
+                event: "summary_loaded_from_cache",
+                properties: [
+                    "book_title": book.title,
+                    "chapter": chapter
+                ]
+            )
+            
             // Animate cached summary (simulate streaming for consistency)
             await animateCachedSummary(cachedSummary)
             return
@@ -52,15 +79,53 @@ class SummaryViewModel: ObservableObject {
         do {
             // Stream new summary from API
             try await streamSummary(chapter: chapter)
+        } catch let aiError as AIError {
+            // Quota exceeded — show paywall, not an error message.
+            // PaywallView appears ONLY on explicit 429, never on network errors.
+            if case .quotaExceeded(let message) = aiError {
+                self.paywallTriggerReason = message
+                self.showPaywall = true
+                self.isLoading = false
+                self.isStreaming = false
+            } else {
+                self.error = aiError
+                self.isLoading = false
+                self.isStreaming = false
+            }
+            AnalyticsManager.shared.track(
+                event: "summary_failed",
+                properties: [
+                    "book_title": book.title,
+                    "chapter": chapter,
+                    "error": aiError.localizedDescription
+                ]
+            )
         } catch {
             self.error = error
             self.isLoading = false
             self.isStreaming = false
+            AnalyticsManager.shared.track(
+                event: "summary_failed",
+                properties: [
+                    "book_title": book.title,
+                    "chapter": chapter,
+                    "error": error.localizedDescription
+                ]
+            )
         }
     }
     
     // ✅ REGENERATE (force new generation, skip cache)
     func regenerate(chapter: Int) async {
+        // ✅ ANALYTICS: Track regeneration request
+        AnalyticsManager.shared.track(
+            event: "summary_regenerated",
+            properties: [
+                "book_title": book.title,
+                "chapter": chapter
+            ]
+        )
+        
         isLoading = true
         isStreaming = true
         streamingText = ""
@@ -73,11 +138,24 @@ class SummaryViewModel: ObservableObject {
             self.error = error
             self.isLoading = false
             self.isStreaming = false
+            
+            // ✅ ANALYTICS: Track failure
+            AnalyticsManager.shared.track(
+                event: "summary_failed",
+                properties: [
+                    "book_title": book.title,
+                    "chapter": chapter,
+                    "error": error.localizedDescription,
+                    "is_regeneration": true
+                ]
+            )
         }
     }
     
     // ✅ CORE STREAMING LOGIC
     private func streamSummary(chapter: Int) async throws {
+        let startTime = Date()
+        
         guard let url = URL(string: "\(Config.apiEndpoint)/api/generate-summary") else {
             throw AIError.requestFailed
         }
@@ -85,7 +163,12 @@ class SummaryViewModel: ObservableObject {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue(Config.appSecret, forHTTPHeaderField: "X-App-Secret")
+        // Get user token from Keychain
+        if let userToken = KeychainManager.shared.getUserToken() {
+            request.setValue("Bearer \(userToken)", forHTTPHeaderField: "Authorization")
+        } else {
+            throw AuthError.invalidResponse
+        }
         request.timeoutInterval = Config.summaryTimeoutSeconds
         
         let body: [String: Any] = [
@@ -103,28 +186,64 @@ class SummaryViewModel: ObservableObject {
         
         // ✅ STREAMING REQUEST
         let (bytes, response) = try await URLSession.shared.bytes(for: request)
-        
+
         guard let httpResponse = response as? HTTPURLResponse else {
             throw AIError.requestFailed
         }
-        
+
+        // ✅ Check status code BEFORE reading stream
+        if httpResponse.statusCode == 429 {
+            // Read error response
+            var errorText = ""
+            for try await line in bytes.lines {
+                errorText += line
+            }
+            
+            // Try to parse JSON error
+            if let errorData = errorText.data(using: .utf8),
+               let errorJson = try? JSONSerialization.jsonObject(with: errorData) as? [String: Any],
+               let errorMessage = errorJson["message"] as? String {
+                
+                // ✅ ANALYTICS: Track quota exceeded
+                AnalyticsManager.shared.track(
+                    event: "quota_limit_reached",
+                    properties: [
+                        "book_title": book.title,
+                        "chapter": chapter,
+                        "type": "summary"
+                    ]
+                )
+                
+                throw AIError.quotaExceeded(errorMessage)
+            }
+            
+            // ✅ ANALYTICS: Track rate limit
+            AnalyticsManager.shared.track(
+                event: "rate_limit_reached",
+                properties: [
+                    "book_title": book.title,
+                    "chapter": chapter,
+                    "type": "summary"
+                ]
+            )
+            
+            throw AIError.rateLimited
+        }
+
         guard httpResponse.statusCode == 200 else {
             switch httpResponse.statusCode {
             case 401:
                 throw AIError.unauthorized
-            case 429:
-                throw AIError.rateLimited
             default:
                 throw AIError.requestFailed
             }
         }
-        
+
         var fullSummary = ""
-        
-        // ✅ PROCESS STREAM LINE BY LINE
+
+        // ✅ PROCESS STREAM LINE BY LINE (only reaches here if 200)
         for try await line in bytes.lines {
-            // SSE format: "data: {json}\n\n"
-            if line.hasPrefix("data: ") {
+           if line.hasPrefix("data: ") {
                 let jsonString = String(line.dropFirst(6)) // Remove "data: "
                 
                 if let data = jsonString.data(using: .utf8),
@@ -162,6 +281,30 @@ class SummaryViewModel: ObservableObject {
                         self.isLoading = false
                         self.isStreaming = false
                         self.isCached = false
+
+                        // Show nudge toast when user has 1 free summary remaining
+                        if let quota = event.quota,
+                           let remaining = quota["remaining"] as? Int,
+                           remaining == 1,
+                           let isPro = quota["isPro"] as? Bool,
+                           !isPro {
+                            self.showQuotaNudge = true
+                        }
+                        
+                        // ✅ ANALYTICS: Track success
+                        let generationTime = Date().timeIntervalSince(startTime)
+                        AnalyticsManager.shared.track(
+                            event: "summary_generated",
+                            properties: [
+                                "book_title": book.title,
+                                "author": book.author,
+                                "chapter": chapter,
+                                "language": language.displayName,
+                                "length": length.rawValue,
+                                "generation_time_seconds": generationTime,
+                                "content_length": summary.content.count
+                            ]
+                        )
                         
                         print("✅ Summary streaming complete!")
                       
@@ -222,4 +365,30 @@ struct StreamEvent: Codable {
     let type: String
     let content: String?
     let summary: String?
+    let quota: [String: Any]?
+
+    enum CodingKeys: String, CodingKey {
+        case type, content, summary, quota
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        type = try container.decode(String.self, forKey: .type)
+        content = try container.decodeIfPresent(String.self, forKey: .content)
+        summary = try container.decodeIfPresent(String.self, forKey: .summary)
+        // Decode quota as raw JSON since it contains mixed types
+        if let quotaData = try? container.decodeIfPresent(Data.self, forKey: .quota),
+           let dict = try? JSONSerialization.jsonObject(with: quotaData) as? [String: Any] {
+            quota = dict
+        } else {
+            quota = nil
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(type, forKey: .type)
+        try container.encodeIfPresent(content, forKey: .content)
+        try container.encodeIfPresent(summary, forKey: .summary)
+    }
 }

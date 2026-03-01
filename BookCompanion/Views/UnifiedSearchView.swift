@@ -45,10 +45,24 @@ struct UnifiedSearchView: View {
                     searchResult: book,
                     bookManager: bookManager,
                     onConfirm: {
+                        // ✅ ANALYTICS: Track book added
+                        AnalyticsManager.shared.track(
+                            event: "book_added",
+                            properties: [
+                                "book_title": book.title,
+                                "author": book.author,
+                                "source": "online_search"
+                            ]
+                        )
+                        
                         selectedBook = nil
                         dismiss()
                     }
                 )
+            }
+            .onAppear {
+                // ✅ ANALYTICS: Track search screen opened
+                AnalyticsManager.shared.track(event: "book_search_opened")
             }
         }
     }
@@ -407,6 +421,15 @@ struct UnifiedSearchView: View {
     private func performOnlineSearch() {
         guard !searchText.isEmpty else { return }
         
+        // ✅ ANALYTICS: Track search performed
+        AnalyticsManager.shared.track(
+            event: "book_search_performed",
+            properties: [
+                "query": searchText,
+                "query_length": searchText.count
+            ]
+        )
+        
         HapticManager.mediumImpact()
         
         isSearching = true
@@ -414,6 +437,15 @@ struct UnifiedSearchView: View {
         Task {
             await viewModel.searchOnline(query: searchText)
             isSearching = false
+            
+            // ✅ ANALYTICS: Track search results
+            AnalyticsManager.shared.track(
+                event: "book_search_completed",
+                properties: [
+                    "query": searchText,
+                    "results_count": viewModel.onlineResults.count
+                ]
+            )
         }
     }
 }
@@ -439,6 +471,15 @@ class UnifiedSearchViewModel: ObservableObject {
         } catch {
             errorMessage = error.localizedDescription
             onlineResults = []
+            
+            // ✅ ANALYTICS: Track search error
+            AnalyticsManager.shared.track(
+                event: "book_search_failed",
+                properties: [
+                    "query": query,
+                    "error": error.localizedDescription
+                ]
+            )
         }
     }
     

@@ -69,6 +69,16 @@ struct BookSearchView: View {
                                 .onDisappear {
                                     bookManager.reloadProgress()
                                 }
+                                .onAppear {
+                                    // ✅ ANALYTICS: Track book opened
+                                    AnalyticsManager.shared.track(
+                                        event: "book_opened",
+                                        properties: [
+                                            "book_title": book.title,
+                                            "author": book.author
+                                        ]
+                                    )
+                                }
                             } label: {
                                 BookCard(book: book)
                             }
@@ -85,14 +95,22 @@ struct BookSearchView: View {
                     .padding()
                     .padding(.bottom, 80) // Space for FAB
                 }
+                .refreshable {
+                    // ✅ PULL TO REFRESH - Sync books from cloud
+                    await bookManager.syncFromCloud()
+                }
             }
         }
         .navigationTitle("My Library")
         .searchable(text: $viewModel.searchText, prompt: "Search your library...")
         .toolbar {
+                        
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button {
                     showingSettings = true
+                    
+                    // ✅ ANALYTICS: Track settings opened
+                    AnalyticsManager.shared.track(event: "settings_opened")
                 } label: {
                     Image(systemName: "gear")
                 }
@@ -105,6 +123,10 @@ struct BookSearchView: View {
         .sheet(isPresented: $showingAddBook) {
             UnifiedSearchView()
                 .environmentObject(bookManager)
+                .onDisappear {
+                    // ✅ ANALYTICS: Track if book was added (check if count increased)
+                    // This will be tracked in the actual book add function
+                }
         }
         .sheet(isPresented: $showingSettings) {
             SettingsView(settingsManager: settingsManager)
@@ -121,6 +143,9 @@ struct BookSearchView: View {
             Button(action: {
                 HapticManager.lightImpact()
                 showingAddBook = true
+                
+                // ✅ ANALYTICS: Track search button tapped
+                AnalyticsManager.shared.track(event: "add_book_button_tapped")
             }) {
                 Image(systemName: "plus")
                     .font(.title3.weight(.semibold))
@@ -172,6 +197,15 @@ struct BookSearchView: View {
     
     // ✅ Extracted delete logic
     private func deleteBook(_ book: Book) {
+        // ✅ ANALYTICS: Track book deleted
+        AnalyticsManager.shared.track(
+            event: "book_deleted",
+            properties: [
+                "book_title": book.title,
+                "author": book.author
+            ]
+        )
+        
         if let index = bookManager.books.firstIndex(where: { $0.id == book.id }) {
             bookManager.deleteBooks(at: IndexSet(integer: index))
         }
