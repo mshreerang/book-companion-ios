@@ -148,7 +148,7 @@ final class BookManager: ObservableObject {
             createdAt: Date()
         )
         
-        books.append(book)
+        books.insert(book, at: 0)  // Insert at top — newest first, matches cloud sort order
         saveBooks()
         
         // ✅ Sync to cloud in background
@@ -209,6 +209,19 @@ final class BookManager: ObservableObject {
         }
     }
     
+    /// Updates in-memory book array only — no cloud sync.
+    /// Use this for frequent UI updates (e.g. slider ticks).
+    func updateProgressInMemory(_ progress: ReadingProgress, for bookId: UUID) {
+        if let index = books.firstIndex(where: { $0.id == bookId }) {
+            books[index].readingProgress = progress
+        }
+        // Also persist locally so it survives app restart
+        let key = progressKey(for: bookId)
+        if let encoded = try? JSONEncoder().encode(progress) {
+            defaults.set(encoded, forKey: key)
+        }
+    }
+
     func saveProgress(_ progress: ReadingProgress, for bookId: UUID) {
         let key = progressKey(for: bookId)
         if let encoded = try? JSONEncoder().encode(progress) {

@@ -17,24 +17,27 @@ final class ProgressInputViewModel: ObservableObject {
     let book: Book
 
     private let repository: ProgressRepository
+    private let bookManager: BookManager          // ← drives cloud sync
     private var hasLoadedInitialState = false
-    private var currentProgressId: UUID  // ✅ Fixed: Store progress ID
+    private var currentProgressId: UUID
 
     init(
         book: Book,
-        repository: ProgressRepository
+        repository: ProgressRepository,
+        bookManager: BookManager
     ) {
         self.book = book
         self.repository = repository
+        self.bookManager = bookManager
 
         if let saved = repository.loadProgress(for: book.id.uuidString) {
             self.selectedLanguage = saved.language
             self.selectedChapter = saved.chapter
-            self.currentProgressId = saved.id  // ✅ Reuse existing ID
+            self.currentProgressId = saved.id
         } else {
             self.selectedLanguage = book.language
-            self.selectedChapter = 1
-            self.currentProgressId = UUID()  // ✅ Create once
+            self.selectedChapter = book.readingProgress?.chapter ?? 1
+            self.currentProgressId = UUID()
         }
 
         self.hasLoadedInitialState = true
@@ -49,10 +52,10 @@ final class ProgressInputViewModel: ObservableObject {
         selectedChapter = chapter
         saveIfReady()
     }
-    
+
     func updateLength(_ length: SummaryLength) {
         selectedLength = length
-        // No need to save - length is per-session preference
+        // Length is per-session only — no need to persist
     }
 
     func saveOnExit() {
@@ -66,13 +69,33 @@ final class ProgressInputViewModel: ObservableObject {
 
     private func save() {
         let progress = ReadingProgress(
-            id: currentProgressId,  // ✅ Fixed: Reuse same ID
+            id: currentProgressId,
             bookId: book.id,
             chapter: selectedChapter,
             language: selectedLanguage,
             updatedAt: Date()
         )
 
+        // Local persistence only — cheap, instant, works offline.
+        // Cloud sync is intentional: call syncChapterToCloud() only when
+        // the user actually acts on a chapter (summary or characters).
         repository.saveProgress(progress)
+
+        // Also update in-memory book array so UI stays consistent,
+        // but WITHOUT triggering the background network call.
+        bookManager.updateProgressInMemory(progress, for: book.id)
+    }
+
+    /// Call this when the user generates a summary or views characters.
+    /// Persists the current chapter to Supabase — one call, intentional action.
+    func syncChapterToCloud() {
+        let progress = ReadingProgress(
+            id: currentProgressId,
+            bookId: book.id,
+            chapter: selectedChapter,
+            language: selectedLanguage,
+            updatedAt: Date()
+        )
+        bookManager.saveProgress(progress, for: book.id)
     }
 }

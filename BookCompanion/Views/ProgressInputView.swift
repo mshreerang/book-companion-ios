@@ -36,7 +36,8 @@ struct ProgressInputView: View {
                     language: viewModel.selectedLanguage,
                     length: viewModel.selectedLength,
                     makeSummaryViewModel: makeSummaryViewModel,
-                    makeCharactersViewModel: makeCharactersViewModel 
+                    makeCharactersViewModel: makeCharactersViewModel,
+                    onAction: { viewModel.syncChapterToCloud() }
                 )
                 
                 // Secondary Action
@@ -45,6 +46,7 @@ struct ProgressInputView: View {
                     chapter: viewModel.selectedChapter,
                     language: viewModel.selectedLanguage,
                     length: viewModel.selectedLength,
+                    onAction: { viewModel.syncChapterToCloud() }
                 )
                 
                 // Settings (Collapsible)
@@ -230,8 +232,9 @@ struct PrimaryActionButton: View {
     let language: Language
     let length: SummaryLength
     let makeSummaryViewModel: (Book, Language, SummaryLength) -> SummaryViewModel
-    let makeCharactersViewModel: (Book, Language) -> CharactersViewModel  // ✅ ADD THIS
-    
+    let makeCharactersViewModel: (Book, Language) -> CharactersViewModel
+    let onAction: () -> Void
+
     var body: some View {
         NavigationLink {
             SummaryView(
@@ -243,6 +246,7 @@ struct PrimaryActionButton: View {
                 language: language
             )
             .id(chapter)
+            .onAppear { onAction() }
         } label: {
             HStack {
                 Image(systemName: "sparkles")
@@ -284,17 +288,16 @@ struct SecondaryActionButton: View {
     let chapter: Int
     let language: Language
     let length: SummaryLength
-    
-    // ✅ REMOVED: Don't need makeCharactersViewModel anymore
-    
+    let onAction: () -> Void
+
     var body: some View {
         NavigationLink {
-            // ✅ NEW: Use CharacterCardsGridView instead
             CharacterCardsGridView(
                 book: book,
                 chapter: chapter,
                 language: language.rawValue
             )
+            .onAppear { onAction() }
         } label: {
             HStack {
                 Image(systemName: "person.2.fill")

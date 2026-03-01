@@ -9,22 +9,25 @@ import Foundation
 import Combine
 
 final class AppContainer {
-
+    
     // MARK: - Managers
-
+    
     let settingsManager = SettingsManager()
-    let bookManager = BookManager()
-
+    let bookManager = BookManager()  // ✅ User's library
+    
     // MARK: - Repositories
-
+    
+    // We can remove bookRepository since we're using BookManager now
+    
     private lazy var progressRepository: ProgressRepository =
         UserDefaultsProgressRepository()
-
+    
     private lazy var summaryRepository: SummaryRepository =
         UserDefaultsSummaryRepository()
-
+    
     // MARK: - Generators
-
+    
+    /// Smart generator selection based on AI mode setting
     private var summaryGenerator: SummaryGenerator {
         if settingsManager.settings.isAIEnabled {
             return ServerAISummaryGenerator(
@@ -35,9 +38,9 @@ final class AppContainer {
             return MockSummaryGenerator()
         }
     }
-
+    
     // MARK: - View Model Factories
-
+    
     func makeSummaryViewModel(
         book: Book,
         language: Language,
@@ -51,18 +54,18 @@ final class AppContainer {
             summaryRepository: summaryRepository
         )
     }
-
+    
     func makeBookSearchViewModel() -> BookSearchViewModel {
         BookSearchViewModel(bookManager: bookManager)
     }
-
+    
     func makeProgressInputViewModel(book: Book) -> ProgressInputViewModel {
         ProgressInputViewModel(
             book: book,
-            repository: progressRepository
+            repository: progressRepository,
+            bookManager: bookManager   // ← enables cloud sync on chapter change
         )
     }
-
     func makeCharactersViewModel(
         book: Book,
         language: Language
@@ -72,24 +75,6 @@ final class AppContainer {
             language: language,
             generator: summaryGenerator,
             summaryRepository: summaryRepository
-        )
-    }
-
-    // ── Character Chat ────────────────────────────────────────────────
-    // Gated by FeatureFlags.characterChat.
-    // CharacterCardBack (Gate 1) prevents this being called when flag is false.
-    // No guard needed here — the UI gates are the enforcement mechanism.
-    func makeCharacterChatViewModel(
-        character: CharacterCard,
-        book: Book,
-        chapter: Int,
-        language: Language
-    ) -> CharacterChatViewModel {
-        CharacterChatViewModel(
-            character: character,
-            book: book,
-            chapter: chapter,
-            language: language
         )
     }
 }
