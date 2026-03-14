@@ -17,9 +17,15 @@ struct BookSearchResult: Identifiable, Equatable {
     let language: String?
     let thumbnailURL: String?
     let categories: [String]?
+    let section: String       // "bestMatch" or "otherResults"
+    let seriesName: String?   // from Google Books metadata or title pattern
+    let seriesPosition: Int?  // position in series (1, 2, 3...)
     
     var author: String {
-        authors.joined(separator: ", ")
+        // Deduplicate authors — some API results return the same name twice
+        var seen = Set<String>()
+        let unique = authors.filter { seen.insert($0).inserted }
+        return unique.joined(separator: ", ")
     }
     
     var estimatedChapters: Int {
@@ -115,7 +121,10 @@ final class BookSearchService {
                 pageCount: book.pageCount,
                 language: book.language,
                 thumbnailURL: book.coverImage ?? book.googleThumbnail,
-                categories: book.categories.isEmpty ? nil : book.categories
+                categories: book.categories.isEmpty ? nil : book.categories,
+                section: book.section ?? "otherResults",
+                seriesName: book.seriesName,
+                seriesPosition: book.seriesPosition
             )
         }
         
@@ -139,6 +148,9 @@ private struct BackendBook: Codable {
     let categories: [String]
     let coverImage: String?
     let googleThumbnail: String?
+    let section: String?
+    let seriesName: String?
+    let seriesPosition: Int?
 }
 
 // MARK: - Errors

@@ -135,25 +135,52 @@ final class BookManager: ObservableObject {
         language: Language,
         totalChapters: Int,
         pageCount: Int? = nil,
-        coverImageURL: String? = nil
+        coverImageURL: String? = nil,
+        seriesName: String? = nil,
+        seriesPosition: Int? = nil
     ) {
+        let bookId = UUID()
+
         let book = Book(
-            id: UUID(),
+            id: bookId,
             title: title.trimmingCharacters(in: .whitespacesAndNewlines),
             author: author.trimmingCharacters(in: .whitespacesAndNewlines),
             language: language,
             totalChapters: totalChapters,
             pageCount: pageCount,
             coverImageURL: coverImageURL,
-            createdAt: Date()
+            createdAt: Date(),
+            seriesName: seriesName
         )
-        
-        books.insert(book, at: 0)  // Insert at top — newest first, matches cloud sort order
+
+        books.insert(book, at: 0)
         saveBooks()
-        
-        // ✅ Sync to cloud in background
+
+        // ✅ Sync to cloud, then link series if confirmed
         Task {
             await syncToCloud()
+
+            // If the user confirmed a series, create/fetch the series row
+            // then link this book to it
+            if let name = seriesName, let position = seriesPosition {
+                let seriesId = await SeriesManager.shared.createOrFetchSeries(
+                    name: name,
+                    totalBooks: nil
+                )
+                if let seriesId = seriesId {
+                    await SeriesManager.shared.linkBook(
+                        bookId: bookId,
+                        seriesId: seriesId,
+                        position: position
+                    )
+                    // Update the local book with seriesId + position
+                    if let index = books.firstIndex(where: { $0.id == bookId }) {
+                        books[index].seriesId = seriesId
+                        books[index].seriesPosition = position
+                        saveBooks()
+                    }
+                }
+            }
         }
     }
     

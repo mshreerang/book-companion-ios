@@ -226,13 +226,49 @@ struct UnifiedSearchView: View {
             } else if viewModel.onlineResults.isEmpty {
                 noOnlineResultsView
             } else {
-                ForEach(viewModel.onlineResults) { book in
-                    OnlineBookRow(
-                        book: book,
-                        isAdded: bookManager.books.contains(where: { $0.title == book.title && $0.author == book.author })
-                    ) {
-                        HapticManager.lightImpact()
-                        selectedBook = book
+                let bestMatches = viewModel.onlineResults.filter { $0.section == "bestMatch" }
+                let otherResults = viewModel.onlineResults.filter { $0.section == "otherResults" }
+
+                // ── Best Match section ────────────────────────────────────
+                if !bestMatches.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("⭐ Best Match")
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.secondary)
+                            .padding(.horizontal, 16)
+
+                        ForEach(bestMatches) { book in
+                            OnlineBookRow(
+                                book: book,
+                                isAdded: bookManager.books.contains(where: { $0.title == book.title && $0.author == book.author })
+                            ) {
+                                HapticManager.lightImpact()
+                                selectedBook = book
+                            }
+                        }
+                    }
+                }
+
+                // ── Other Results section ─────────────────────────────────
+                if !otherResults.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Other Results")
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.secondary)
+                            .padding(.horizontal, 16)
+                            .padding(.top, bestMatches.isEmpty ? 0 : 8)
+
+                        ForEach(otherResults) { book in
+                            OnlineBookRow(
+                                book: book,
+                                isAdded: bookManager.books.contains(where: { $0.title == book.title && $0.author == book.author })
+                            ) {
+                                HapticManager.lightImpact()
+                                selectedBook = book
+                            }
+                        }
                     }
                 }
             }

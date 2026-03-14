@@ -14,17 +14,17 @@ final class BookSearchViewModelTests: XCTestCase {
     private var bookManager: BookManager!
     private var cancellables = Set<AnyCancellable>()
 
-    override func setUp() {
-        super.setUp()
+    override func setUp() async throws {
+        try await super.setUp()
         bookManager = BookManager()
         sut = BookSearchViewModel(bookManager: bookManager)
     }
 
-    override func tearDown() {
+    override func tearDown() async throws {
         cancellables.removeAll()
         sut = nil
         bookManager = nil
-        super.tearDown()
+        try await super.tearDown()
     }
 
     // TC-BSV-001 Initial searchText is empty

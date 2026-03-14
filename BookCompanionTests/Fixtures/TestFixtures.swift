@@ -129,3 +129,53 @@ enum TestFixtures {
         )
     }
 }
+
+
+// MARK: - Async Timeout Helpers
+// Used to prevent network-touching tests from hanging the entire suite.
+
+struct TestTimeoutError: Error {}
+
+/// Runs an async block with a deadline. Throws `TestTimeoutError` if it exceeds `seconds`.
+func withTimeout(seconds: Double, block: @escaping () async -> Void) async throws {
+    try await withThrowingTaskGroup(of: Void.self) { group in
+        group.addTask { await block() }
+        group.addTask {
+            try await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
+            throw TestTimeoutError()
+        }
+        try await group.next()
+        group.cancelAll()
+    }
+}
+
+/// Runs an async block that returns a value, with a deadline.
+func withTimeoutReturning<T>(seconds: Double, block: @escaping () async -> T) async throws -> T {
+    try await withThrowingTaskGroup(of: T?.self) { group in
+        group.addTask { await block() }
+        group.addTask {
+            try await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
+            throw TestTimeoutError()
+        }
+        guard let result = try await group.next() else { throw TestTimeoutError() }
+        group.cancelAll()
+        return result!
+    }
+}
+
+
+// MARK: - UserDefaults Cleanup
+
+extension TestFixtures {
+    /// Removes all keys that BookManager writes to UserDefaults.
+    /// Call in setUp/tearDown of any test that instantiates BookManager.
+    static func cleanBookManagerDefaults() {
+        let defaults = UserDefaults.standard
+        defaults.removeObject(forKey: "user_books")
+        // Also remove any progress keys left by previous test books
+        let prefix = "reading_progress_"
+        for key in defaults.dictionaryRepresentation().keys where key.hasPrefix(prefix) {
+            defaults.removeObject(forKey: key)
+        }
+    }
+}

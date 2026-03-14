@@ -25,8 +25,15 @@ enum FeatureFlags {
     //  Set to `true` to enable for all users regardless of tier (debug only).
     // ─────────────────────────────────────────────
     static var characterChat: Bool {
-        StoreManager.shared.isPro
+        StoreManager.shared.isPro //true
     }
+
+    // ─────────────────────────────────────────────
+    //  SERIES TRACKING
+    //  Enables series detection in ConfirmBookView and
+    //  cross-book AI context injection in summaries.
+    // ─────────────────────────────────────────────
+    static let seriesTracking: Bool = true
 
     // ─────────────────────────────────────────────
     //  Future flags go here, e.g.:

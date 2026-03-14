@@ -10,6 +10,7 @@ struct SummaryView: View {
     let language: Language
     
     @State private var showingShareSheet = false
+    @State private var showNarratorSheet = false
     @EnvironmentObject private var storeManager: StoreManager
     @ObservedObject private var ttsManager = TextToSpeechManager.shared
 
@@ -77,6 +78,33 @@ struct SummaryView: View {
                     summaryContent(summary.content)
                 }
             }
+
+            // ── Active Narrator — mini player floats above safe area ──────
+            // Always rendered when Vani is active so it persists while scrolling.
+            // Tap → expands to full sheet. X → dismisses.
+            if isVaniActive {
+                ActiveNarratorView(
+                    viewModel:        viewModel.vaniPlayer,
+                    fallbackText:     viewModel.summary?.content ?? "",
+                    fallbackLanguage: language,
+                    chapterTitle:     "Story So Far · Chapter \(chapter)",
+                    onPrewarmTap: viewModel.summary.map { summary in {
+                        Task {
+                            await viewModel.vaniPlayer.prewarm(
+                                text: summary.content,
+                                language: language,
+                                bookId: book.id.uuidString,
+                                chapterNumber: chapter
+                            )
+                        }
+                    }},
+                    isSummaryReady: viewModel.summary != nil
+                )
+                .padding(.horizontal, 12)
+                .padding(.bottom, 8)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+                .animation(.spring(response: 0.4, dampingFraction: 0.8), value: isVaniActive)
+            }
         }
         .navigationTitle("Story So Far")
         .navigationBarTitleDisplayMode(.inline)
@@ -100,6 +128,19 @@ struct SummaryView: View {
                 .environmentObject(storeManager)
         }
     }
+
+    // MARK: - Vani Active Check
+
+    /// Show the narrator bar as soon as loading starts.
+    /// Visible during skeleton, streaming, and after summary loads.
+    private var isVaniActive: Bool {
+        if viewModel.isLoading || viewModel.isStreaming { return true }
+        guard viewModel.summary != nil else { return false }
+        switch viewModel.vaniPlayer.playerState {
+        case .fallback: return false
+        default:        return true
+        }
+    }
     
     // MARK: - Subviews
     
@@ -118,6 +159,8 @@ struct SummaryView: View {
                 }
             }
             .padding()
+            // Add bottom padding so content isn't hidden behind ActiveNarratorView
+            .padding(.bottom, isVaniActive ? 88 : 0)
         }
     }
     
@@ -143,14 +186,14 @@ struct SummaryView: View {
     }
 
     private var loadingContent: some View {
-        VStack(spacing: 20) {
-            if !viewModel.streamingText.isEmpty {
-                // ✅ Show streaming text as it arrives
-                summaryContent(viewModel.streamingText)
-            } else {
-                // ✅ Show skeleton while waiting for first chunk
-                SummarySkeleton()
-            }
+        VStack(spacing: 16) {
+            Text(loadingMessage)
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal)
+                .padding(.top, 24)
+            SummarySkeleton()
         }
     }
     
@@ -177,19 +220,6 @@ struct SummaryView: View {
 
     private var toolbarButtons: some View {
         HStack {
-            // TTS Button
-            if let summary = viewModel.summary {
-                Button {
-                    if ttsManager.isSpeaking {
-                        ttsManager.stop()
-                    } else {
-                        ttsManager.speak(text: summary.content, language: language)  // ✅ FIXED
-                    }
-                } label: {
-                    Image(systemName: ttsManager.isSpeaking ? "stop.fill" : "speaker.wave.2.fill")
-                }
-            }
-            
             // Share Button
             Button {
                 showingShareSheet = true

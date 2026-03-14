@@ -11,39 +11,41 @@ import XCTest
 
 final class AgeVerificationServiceTests: XCTestCase {
 
+    private var sut: AgeVerificationService { AgeVerificationService.shared }
+
     override func setUp() {
         super.setUp()
-        AgeVerificationService.reset()
+        sut.reset()
     }
 
     override func tearDown() {
-        AgeVerificationService.reset()
+        sut.reset()
         super.tearDown()
     }
 
-    // TC-SV-101 Default state is not verified
-    func test_defaultState_isNotVerified() {
-        XCTAssertFalse(AgeVerificationService.isVerified)
+    // TC-SV-101 Default state is not confirmed
+    func test_defaultState_isNotConfirmed() {
+        XCTAssertFalse(sut.isAgeConfirmed())
     }
 
-    // TC-SV-102 setVerified persists true
-    func test_setVerified_persistsTrue() {
-        AgeVerificationService.setVerified(true)
-        XCTAssertTrue(AgeVerificationService.isVerified)
+    // TC-SV-102 confirmAge persists true
+    func test_confirmAge_persistsTrue() {
+        sut.confirmAge()
+        XCTAssertTrue(sut.isAgeConfirmed())
     }
 
     // TC-SV-103 reset returns to false
     func test_reset_returnsToFalse() {
-        AgeVerificationService.setVerified(true)
-        AgeVerificationService.reset()
-        XCTAssertFalse(AgeVerificationService.isVerified)
+        sut.confirmAge()
+        sut.reset()
+        XCTAssertFalse(sut.isAgeConfirmed())
     }
 
-    // TC-SV-104 Multiple set calls are idempotent
-    func test_setVerified_idempotent() {
-        AgeVerificationService.setVerified(true)
-        AgeVerificationService.setVerified(true)
-        XCTAssertTrue(AgeVerificationService.isVerified)
+    // TC-SV-104 Multiple confirmAge calls are idempotent
+    func test_confirmAge_idempotent() {
+        sut.confirmAge()
+        sut.confirmAge()
+        XCTAssertTrue(sut.isAgeConfirmed())
     }
 }
 
@@ -127,13 +129,13 @@ final class ServerAISummaryGeneratorPureFunctionTests: XCTestCase {
     // TC-SV-115 mapServerError maps 401 to unauthorized
     func test_mapServerError_401_mapsToUnauthorized() {
         let error = mapServerError(statusCode: 401, body: nil)
-        XCTAssertEqual(error, .unauthorized)
+        if case .unauthorized = error { } else { XCTFail("Expected .unauthorized, got \(error)") }
     }
 
     // TC-SV-116 mapServerError maps unknown codes to requestFailed
     func test_mapServerError_500_mapsToRequestFailed() {
         let error = mapServerError(statusCode: 500, body: nil)
-        XCTAssertEqual(error, .requestFailed)
+        if case .requestFailed = error { } else { XCTFail("Expected .requestFailed, got \(error)") }
     }
 }
 

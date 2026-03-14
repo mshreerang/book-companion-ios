@@ -19,25 +19,34 @@ class SummaryViewModel: ObservableObject {
     @Published var showPaywall = false
     @Published var paywallTriggerReason = ""
     @Published var showQuotaNudge = false
+
+    // ── Vani TTS Player ───────────────────────────────────────────────────────
+    // Observed by SummaryView to conditionally show ActiveNarratorView.
+    // Pre-warm fires on 'done' event with full summary text — never with a partial chunk.
+    @Published var vaniPlayer = VaniPlayerViewModel()
     
     private let book: Book
     private let language: Language
     private let length: SummaryLength
     private let generator: SummaryGenerator
     private let summaryRepository: SummaryRepository
+    private let allBooks: [Book]   // for series context injection
     private var isLoadingCharacters = false
+
     init(
         book: Book,
         language: Language,
         length: SummaryLength,
         generator: SummaryGenerator,
-        summaryRepository: SummaryRepository
+        summaryRepository: SummaryRepository,
+        allBooks: [Book] = []
     ) {
         self.book = book
         self.language = language
         self.length = length
         self.generator = generator
         self.summaryRepository = summaryRepository
+        self.allBooks = allBooks
     }
     
     // ✅ STREAMING GENERATION
@@ -59,6 +68,9 @@ class SummaryViewModel: ObservableObject {
         streamingText = ""
         error = nil
         isCached = false
+
+        // Reset Vani player for the new chapter
+        vaniPlayer.reset()
         
         // Check cache first
         if let cachedSummary = loadCachedSummary(chapter: chapter) {
@@ -72,7 +84,7 @@ class SummaryViewModel: ObservableObject {
             )
             
             // Animate cached summary (simulate streaming for consistency)
-            await animateCachedSummary(cachedSummary)
+            await animateCachedSummary(cachedSummary, chapter: chapter)
             return
         }
         
@@ -131,6 +143,9 @@ class SummaryViewModel: ObservableObject {
         streamingText = ""
         error = nil
         isCached = false
+
+        // Reset Vani player for regeneration
+        vaniPlayer.reset()
         
         do {
             try await streamSummary(chapter: chapter)
@@ -171,14 +186,26 @@ class SummaryViewModel: ObservableObject {
         }
         request.timeoutInterval = Config.summaryTimeoutSeconds
         
-        let body: [String: Any] = [
+        // Build series context if this book is part of a series
+        // SeriesManager.buildAIContext returns nil for standalone books — no overhead
+        let seriesContext = SeriesManager.shared.buildAIContext(for: book, allBooks: allBooks)
+
+        var body: [String: Any] = [
             "bookTitle": book.title,
             "author": book.author,
             "chapter": chapter,
             "language": language.displayName,
             "length": length.rawValue,
-            "stream": true  // ✅ Enable streaming
+            "stream": true
         ]
+
+        // Inject series context when available — backend injects it into the prompt
+        if let ctx = seriesContext,
+           let encoded = try? JSONEncoder().encode(ctx),
+           let dict = try? JSONSerialization.jsonObject(with: encoded) as? [String: Any] {
+            body["seriesContext"] = dict
+            print("📚 Series context injected: \(ctx.seriesName) Book \(ctx.bookPosition), \(ctx.completedBooks.count) prior book(s)")
+        }
         
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
         
@@ -251,13 +278,9 @@ class SummaryViewModel: ObservableObject {
                     
                     switch event.type {
                     case "chunk":
-                        // ✅ UPDATE UI WITH CHUNK
                         if let content = event.content {
                             fullSummary += content
                             streamingText = fullSummary
-                            
-                            // Add small delay for smooth animation
-                            try? await Task.sleep(nanoseconds: 10_000_000) // 0.01s
                         }
                         
                     case "done":
@@ -276,11 +299,23 @@ class SummaryViewModel: ObservableObject {
                         // Save to cache
                         saveSummaryToCache(summary, chapter: chapter)
                         
-                        // Update UI
+                        // Update UI with final canonical text
                         self.summary = summary
+                        self.streamingText = summary.content
                         self.isLoading = false
                         self.isStreaming = false
                         self.isCached = false
+
+                        // Fire Vani pre-warm with FULL summary text.
+                        // Streaming is done so TTS gets the complete text.
+                        Task {
+                            await vaniPlayer.prewarm(
+                                text: summary.content,
+                                language: language,
+                                bookId: book.id.uuidString,
+                                chapterNumber: chapter
+                            )
+                        }
 
                         // Show nudge toast when user has 1 free summary remaining
                         if let quota = event.quota,
@@ -318,7 +353,7 @@ class SummaryViewModel: ObservableObject {
     }
     
     // ✅ ANIMATE CACHED SUMMARY (simulate streaming for consistency)
-    private func animateCachedSummary(_ summary: BookSummary) async {
+    private func animateCachedSummary(_ summary: BookSummary, chapter: Int = 0) async {
         isCached = true
         
         // Split into words
@@ -338,10 +373,18 @@ class SummaryViewModel: ObservableObject {
         self.summary = summary
         self.isLoading = false
         self.isStreaming = false
-     
+
+        // Vani pre-warm with full cached summary text
+        Task {
+            await vaniPlayer.prewarm(
+                text: summary.content,
+                language: language,
+                bookId: book.id.uuidString,
+                chapterNumber: chapter
+            )
+        }
     }
-    
-  
+
     // MARK: - Cache Management
     
     private func loadCachedSummary(chapter: Int) -> BookSummary? {

@@ -51,7 +51,8 @@ final class AppContainer {
             language: language,
             length: length,
             generator: summaryGenerator,
-            summaryRepository: summaryRepository
+            summaryRepository: summaryRepository,
+            allBooks: bookManager.books  // enables series context injection
         )
     }
     
@@ -75,6 +76,19 @@ final class AppContainer {
             language: language,
             generator: summaryGenerator,
             summaryRepository: summaryRepository
+        )
+    }
+
+    func makeCharacterCardsViewModel(
+        book: Book,
+        chapter: Int,
+        language: String
+    ) -> CharacterCardsViewModel {
+        CharacterCardsViewModel(
+            book: book,
+            chapter: chapter,
+            language: language,
+            allBooks: bookManager.books  // enables series context injection
         )
     }
 }

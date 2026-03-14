@@ -55,18 +55,36 @@ struct SearchBooksView: View {
                     // No results
                     ContentUnavailableView.search(text: searchText)
                 } else {
-                    // Results
+                    // Results — split into Best Match and Other Results
+                    let bestMatches = results.filter { $0.section == "bestMatch" }
+                    let otherResults = results.filter { $0.section == "otherResults" }
+
                     List {
-                        ForEach(results) { result in
-                            BookSearchResultRow(result: result)
-                                .contentShape(Rectangle())
-                                .onTapGesture {
-                                    selectedBook = result
-                                    
+                        if !bestMatches.isEmpty {
+                            Section("Best Match") {
+                                ForEach(bestMatches) { result in
+                                    BookSearchResultRow(result: result)
+                                        .contentShape(Rectangle())
+                                        .onTapGesture {
+                                            selectedBook = result
+                                        }
                                 }
+                            }
+                        }
+
+                        if !otherResults.isEmpty {
+                            Section("Other Results") {
+                                ForEach(otherResults) { result in
+                                    BookSearchResultRow(result: result)
+                                        .contentShape(Rectangle())
+                                        .onTapGesture {
+                                            selectedBook = result
+                                        }
+                                }
+                            }
                         }
                     }
-                    .listStyle(.plain)
+                    .listStyle(.insetGrouped)
                 }
             }
             .navigationTitle("Add Book")
@@ -213,6 +231,14 @@ struct ConfirmBookView: View {
     
     @State private var totalChapters: Int
     @State private var selectedLanguage: Language
+
+    // Series detection state
+    @State private var detectedSeries: SeriesDetectionResult? = nil
+    @State private var authorHint: AuthorSeriesHint? = nil
+    @State private var seriesConfirmed: Bool = false
+    @State private var seriesName: String = ""
+    @State private var seriesPosition: Int = 1
+    @State private var isScanning: Bool = false      // true while AI sniper call is in flight
     
     init(
         searchResult: BookSearchResult,
@@ -226,6 +252,26 @@ struct ConfirmBookView: View {
         // Initialize state
         _totalChapters = State(initialValue: searchResult.estimatedChapters)
         _selectedLanguage = State(initialValue: searchResult.detectedLanguage)
+
+        // Run series detection immediately
+        let detected = SeriesDetector.detect(from: searchResult)
+        let hint = detected == nil
+            ? SeriesDetector.authorHint(for: searchResult, in: bookManager.books)
+            : nil
+
+        _detectedSeries = State(initialValue: detected)
+        _authorHint = State(initialValue: hint)
+
+        // Pre-confirm only if we have a strong metadata signal (name + position both present)
+        let hasStrongSignal = detected != nil && !(detected?.seriesName.isEmpty ?? true)
+        _seriesConfirmed = State(initialValue: hasStrongSignal)
+        _seriesName = State(initialValue: detected?.seriesName ?? "")
+        _seriesPosition = State(initialValue: detected?.position ?? (hint?.suggestedPosition ?? 1))
+
+        // AI sniper call needed when: no metadata, no regex match
+        // isScanning=true immediately so UI shows spinner on appear
+        let needsAIScan = detected == nil
+        _isScanning = State(initialValue: needsAIScan)
     }
     
     var body: some View {
@@ -292,6 +338,58 @@ struct ConfirmBookView: View {
                     }
                 }
                 
+                // ── Series Section ──────────────────────────────────────────
+                Section {
+                    Toggle(isOn: $seriesConfirmed) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            HStack(spacing: 6) {
+                                Text("Part of a Series")
+                                    .font(.subheadline)
+                                if isScanning {
+                                    ProgressView()
+                                        .scaleEffect(0.7)
+                                }
+                            }
+                            if isScanning {
+                                Text("Scanning...")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            } else if detectedSeries != nil, seriesConfirmed {
+                                Text("Detected automatically")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                    }
+                    .disabled(isScanning) // prevent toggling while scan is in flight
+                    .onChange(of: seriesConfirmed) { _, confirmed in
+                        if confirmed && seriesName.isEmpty {
+                            seriesName = detectedSeries?.seriesName ?? ""
+                            seriesPosition = detectedSeries?.position ?? 1
+                        }
+                    }
+
+                    if seriesConfirmed {
+                        TextField("Series Name", text: $seriesName)
+                            .textFieldStyle(.plain)
+
+                        Stepper("Book \(seriesPosition) in series", value: $seriesPosition, in: 1...50)
+                    }
+                } header: {
+                    Text("Series")
+                } footer: {
+                    if isScanning {
+                        Text("Checking series information...")
+                            .foregroundColor(.secondary)
+                    } else if seriesConfirmed {
+                        Text("BookCompanion will use your series history for richer, context-aware summaries.")
+                    } else if detectedSeries != nil {
+                        Text("We detected this may be part of a series. Toggle to link it.")
+                    } else if let hint = authorHint {
+                        Text("You have \(hint.matchingBooks.count) other book(s) by this author. Toggle to link them as a series.")
+                    }
+                }
+
                 Section {
                     Button {
                         addBook()
@@ -307,6 +405,26 @@ struct ConfirmBookView: View {
             }
             .navigationTitle("Confirm Book")
             .navigationBarTitleDisplayMode(.inline)
+            // task(id: searchResult.id) ensures the task re-runs for every
+            // unique book — even if SwiftUI reuses the view between sheet presentations.
+            .task(id: searchResult.id) {
+                guard isScanning else { return }
+
+                let result = await SeriesManager.shared.detectSeries(
+                    title: searchResult.title,
+                    author: searchResult.author
+                )
+
+                isScanning = false
+
+                if let result = result {
+                    detectedSeries = result
+                    seriesName = result.seriesName
+                    seriesPosition = result.position
+                    seriesConfirmed = true
+                }
+                // nil = standalone or timed out — leave toggle OFF silently
+            }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Back") {
@@ -336,7 +454,7 @@ struct ConfirmBookView: View {
             author: searchResult.author,
             language: selectedLanguage,
             totalChapters: totalChapters,
-            coverImageURL: searchResult.thumbnailURL            
+            coverImageURL: searchResult.thumbnailURL
         )
         
         dismiss()
@@ -347,4 +465,3 @@ struct ConfirmBookView: View {
 #Preview {
     SearchBooksView(bookManager: BookManager())
 }
-

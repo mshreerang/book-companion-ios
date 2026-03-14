@@ -12,13 +12,29 @@ class CharacterCardsViewModel: ObservableObject {
     private let book: Book
     private let chapter: Int
     private let language: String
+    private let allBooks: [Book]   // for series context injection
     
-    init(book: Book, chapter: Int, language: String = "English") {
+    init(book: Book, chapter: Int, language: String = "English", allBooks: [Book] = []) {
         self.book = book
         self.chapter = chapter
         self.language = language
+        self.allBooks = allBooks
     }
     
+    // MARK: - Series Context Helper
+
+    /// Build series context dict for API requests.
+    /// Returns nil for standalone books — no overhead.
+    private func buildSeriesContextDict() -> [String: Any]? {
+        guard let ctx = SeriesManager.shared.buildAIContext(for: book, allBooks: allBooks),
+              let encoded = try? JSONEncoder().encode(ctx),
+              let dict = try? JSONSerialization.jsonObject(with: encoded) as? [String: Any] else {
+            return nil
+        }
+        print("📚 Series context injected for characters: \(ctx.seriesName) Book \(ctx.bookPosition)")
+        return dict
+    }
+
     // MARK: - Load Names (Fast!)
     
     func loadNames() async {
@@ -107,13 +123,14 @@ class CharacterCardsViewModel: ObservableObject {
         }
         request.setValue("Bearer \(userToken)", forHTTPHeaderField: "Authorization")
         
-        let body: [String: Any] = [
+        var body: [String: Any] = [
             "action": "getNames",
             "bookTitle": book.title,
             "author": book.author,
             "chapter": chapter,
             "language": language
         ]
+        if let ctx = buildSeriesContextDict() { body["seriesContext"] = ctx }
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
         
         let (data, response) = try await URLSession.shared.data(for: request)
@@ -148,7 +165,7 @@ class CharacterCardsViewModel: ObservableObject {
         }
         request.setValue("Bearer \(userToken)", forHTTPHeaderField: "Authorization")
         
-        let body: [String: Any] = [
+        var body: [String: Any] = [
             "action": "getDetails",
             "bookTitle": book.title,
             "author": book.author,
@@ -156,6 +173,7 @@ class CharacterCardsViewModel: ObservableObject {
             "characterName": name,
             "language": language
         ]
+        if let ctx = buildSeriesContextDict() { body["seriesContext"] = ctx }
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
         
         let (data, response) = try await URLSession.shared.data(for: request)
@@ -200,7 +218,7 @@ class CharacterCardsViewModel: ObservableObject {
         }
         request.setValue("Bearer \(userToken)", forHTTPHeaderField: "Authorization")
         
-        let body: [String: Any] = [
+        var body: [String: Any] = [
             "action": "prewarm",
             "bookTitle": book.title,
             "author": book.author,
@@ -208,6 +226,7 @@ class CharacterCardsViewModel: ObservableObject {
             "characterNames": names,
             "language": language
         ]
+        if let ctx = buildSeriesContextDict() { body["seriesContext"] = ctx }
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
         
         let (data, response) = try await URLSession.shared.data(for: request)

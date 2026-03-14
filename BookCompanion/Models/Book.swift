@@ -16,6 +16,11 @@ struct Book: Identifiable, Codable {
     let coverImageURL: String?
     let createdAt: Date
     
+    // Series tracking (optional — nil for standalone books)
+    var seriesId: UUID?
+    var seriesPosition: Int?
+    var seriesName: String?      // display only — canonical name lives in series table
+
     // Reading progress (loaded separately, not stored in Book)
     // This is transient and managed by BookManager
     var readingProgress: ReadingProgress?
@@ -57,7 +62,8 @@ struct Book: Identifiable, Codable {
     
     // Custom coding keys to exclude readingProgress from encoding/decoding
     enum CodingKeys: String, CodingKey {
-        case id, title, author, language, totalChapters,pageCount, coverImageURL, createdAt
+        case id, title, author, language, totalChapters, pageCount, coverImageURL, createdAt
+        case seriesId, seriesPosition, seriesName
     }
     
     // Custom decoder to ensure readingProgress is properly initialized
@@ -71,7 +77,10 @@ struct Book: Identifiable, Codable {
         pageCount = try container.decodeIfPresent(Int.self, forKey: .pageCount)
         coverImageURL = try container.decodeIfPresent(String.self, forKey: .coverImageURL)
         createdAt = try container.decode(Date.self, forKey: .createdAt)
-        
+        seriesId       = try container.decodeIfPresent(UUID.self,   forKey: .seriesId)
+        seriesPosition = try container.decodeIfPresent(Int.self,    forKey: .seriesPosition)
+        seriesName     = try container.decodeIfPresent(String.self, forKey: .seriesName)
+
         // Initialize readingProgress as nil - will be loaded by BookManager
         readingProgress = nil
     }
@@ -86,6 +95,9 @@ struct Book: Identifiable, Codable {
         pageCount: Int? = nil,
         coverImageURL: String? = nil,
         createdAt: Date,
+        seriesId: UUID? = nil,
+        seriesPosition: Int? = nil,
+        seriesName: String? = nil,
         readingProgress: ReadingProgress? = nil
     ) {
         self.id = id
@@ -96,6 +108,9 @@ struct Book: Identifiable, Codable {
         self.pageCount = pageCount
         self.coverImageURL = coverImageURL
         self.createdAt = createdAt
+        self.seriesId = seriesId
+        self.seriesPosition = seriesPosition
+        self.seriesName = seriesName
         self.readingProgress = readingProgress
     }
 }

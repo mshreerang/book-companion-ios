@@ -8,8 +8,8 @@ final class MockProgressRepository: ProgressRepository {
 
     private var store: [String: ReadingProgress] = [:]
 
-    private(set) var saveProgressCalled = false
-    private(set) var lastSavedProgress: ReadingProgress?
+    var saveProgressCalled = false
+    var lastSavedProgress: ReadingProgress?
 
     func loadProgress(for bookId: String) -> ReadingProgress? {
         store[bookId]
