@@ -20,13 +20,12 @@ enum FeatureFlags {
 
     // ─────────────────────────────────────────────
     //  CHARACTER CHAT
-    //  Gated on Pro entitlement — Pro users see the chat button,
-    //  free users see the paywall when they attempt to access it.
-    //  Set to `true` to enable for all users regardless of tier (debug only).
+    //  Available to all signed-in users.
+    //  Free users get 5 messages per character per book (enforced backend).
+    //  Pro users get unlimited messages.
+    //  The quota gate is handled server-side — no iOS tier check needed here.
     // ─────────────────────────────────────────────
-    static var characterChat: Bool {
-        StoreManager.shared.isPro //true
-    }
+    static let characterChat: Bool = true
 
     // ─────────────────────────────────────────────
     //  SERIES TRACKING

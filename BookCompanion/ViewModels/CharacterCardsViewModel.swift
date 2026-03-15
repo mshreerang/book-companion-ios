@@ -63,11 +63,13 @@ class CharacterCardsViewModel: ObservableObject {
     
     // MARK: - Load Details (On Demand)
     
-    func loadDetails(for name: String) async -> CharacterCard? {
+    /// Returns (character, isQuotaError).
+    /// isQuotaError=true means the user has hit their monthly analysis limit.
+    func loadDetails(for name: String) async -> (CharacterCard?, Bool) {
         // ✅ Check cache first
         if let cached = detailsCache[name] {
             print("✅ Using cached details for \(name)")
-            return cached
+            return (cached, false)
         }
         
         // Fetch on demand
@@ -83,11 +85,14 @@ class CharacterCardsViewModel: ObservableObject {
                 self.detailsCache[name] = character
             }
             
-            return character
+            return (character, false)
             
+        } catch CharacterAPIError.quotaExceeded(let message) {
+            print("❌ Quota exceeded for \(name): \(message)")
+            return (nil, true)
         } catch {
             print("❌ Error loading details for \(name): \(error)")
-            return nil
+            return (nil, false)
         }
     }
     

@@ -15,6 +15,7 @@ struct CharacterCardsGridView: View {
 
     // Which card is currently expanded (nil = none)
     @State private var expandedName: String? = nil
+    @State private var showPaywall = false
 
     private let columns = [
         GridItem(.flexible(), spacing: 16),
@@ -66,6 +67,10 @@ struct CharacterCardsGridView: View {
                 }
             }
             .task { await viewModel.loadNames() }
+            .sheet(isPresented: $showPaywall) {
+                PaywallView(triggerReason: "Upgrade to Pro for unlimited character analyses.")
+                    .environmentObject(StoreManager.shared)
+            }
         }
     }
 
@@ -178,8 +183,10 @@ struct CharacterCardsGridView: View {
                 .padding(.horizontal)
 
             if message.contains("Upgrade") || message.contains("limit") {
-                Button("Upgrade to Pro") { }
-                    .buttonStyle(.borderedProminent)
+                Button("Upgrade to Pro") {
+                    showPaywall = true
+                }
+                .buttonStyle(.borderedProminent)
             } else {
                 Button("Try Again") {
                     Task { await viewModel.loadNames() }

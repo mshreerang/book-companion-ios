@@ -16,10 +16,38 @@ import Combine
 // streaming doesn't need. Keeping them decoupled avoids breaking
 // changes if either protocol evolves independently.
 
-private struct ChatStreamEvent: Codable {
-    let type: String        // "chunk" | "done" | "safety_block" | "safety_replaced" | "safety_end" | "quota_limit"
-    let content: String?    // character response text (chunk / done / safety_replaced)
-    let message: String?    // human-readable copy for safety_block / safety_end / quota_limit
+private struct ChatStreamEvent {
+    let type: String
+    let content: String?
+    let message: String?
+    let used: Int?
+    let limit: Int?
+    // quota is decoded manually — nested object or null
+    let quota: QuotaState?
+
+    struct QuotaState {
+        let used: Int
+        let limit: Int
+    }
+
+    // Manual JSON decoding — avoids Codable synthesis issues with nested
+    // optional objects (quota: null vs quota: {...}) in SSE JSON payloads.
+    init?(json: [String: Any]) {
+        guard let type = json["type"] as? String else { return nil }
+        self.type    = type
+        self.content = json["content"] as? String
+        self.message = json["message"] as? String
+        self.used    = json["used"]    as? Int
+        self.limit   = json["limit"]   as? Int
+
+        if let q = json["quota"] as? [String: Any],
+           let qUsed  = q["used"]  as? Int,
+           let qLimit = q["limit"] as? Int {
+            self.quota = QuotaState(used: qUsed, limit: qLimit)
+        } else {
+            self.quota = nil
+        }
+    }
 }
 
 // MARK: - CharacterChatViewModel
@@ -33,6 +61,8 @@ final class CharacterChatViewModel: ObservableObject {
     @Published var inputText: String = ""
     @Published var isStreaming: Bool = false     // true from send → until done/safety_replaced/error
     @Published var isAtLimit: Bool = false       // quota gate — shows upgrade card, amber UI
+    @Published var quotaUsed: Int? = nil          // messages used this character (nil = Pro/unknown)
+    @Published var quotaLimit: Int? = nil         // message limit for free users (nil = Pro)
     @Published var isSafetyEnded: Bool = false   // safety_end — session permanently locked, no upgrade CTA
     @Published var error: String? = nil          // transient network/auth errors shown in UI
 
@@ -85,6 +115,13 @@ final class CharacterChatViewModel: ObservableObject {
             // Restore previous session — user sees their conversation history
             messages = session.messages
             print("✅ CharacterChatViewModel: restored \(session.messages.count) messages")
+
+            // Restore isAtLimit if the session ended with a quota_limit message
+            // This prevents the user from sending more messages after limit is hit
+            if messages.contains(where: { $0.systemKind == .quotaLimit }) {
+                isAtLimit = true
+                print("ℹ️ CharacterChatViewModel: quota limit restored from session")
+            }
         } else {
             // Fresh session — fetch a real in-character greeting from the backend
             Task { await fetchGreeting() }
@@ -230,13 +267,31 @@ final class CharacterChatViewModel: ObservableObject {
             // MARK: Process stream line by line
 
             var fullResponse = ""
+            var firstLine = true
 
             for try await line in bytes.lines {
+                // The quota_limit and safety_block responses are plain JSON (not SSE).
+                // They arrive as the first line without a "data: " prefix.
+                // Handle them before the SSE loop so they are never silently dropped.
+                if firstLine && !line.hasPrefix("data: ") && !line.isEmpty {
+                    firstLine = false
+                    if let data = line.data(using: .utf8),
+                       let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                       let event = ChatStreamEvent(json: json),
+                       event.type == "quota_limit" || event.type == "safety_block" {
+                        handleStreamEvent(event, fullResponse: &fullResponse, startTime: startTime)
+                        break
+                    }
+                    continue
+                }
+                firstLine = false
+
                 guard line.hasPrefix("data: ") else { continue }
 
                 let jsonString = String(line.dropFirst(6))
                 guard let data = jsonString.data(using: .utf8),
-                      let event = try? JSONDecoder().decode(ChatStreamEvent.self, from: data)
+                      let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                      let event = ChatStreamEvent(json: json)
                 else { continue }
 
                 handleStreamEvent(event, fullResponse: &fullResponse, startTime: startTime)
@@ -287,7 +342,11 @@ final class CharacterChatViewModel: ObservableObject {
         // that no more chunks are coming so it can finalise when drained.
         case "done":
             networkStreamDone = true
-            // The typewriter's completion handler calls finaliseStream()
+            // Update quota counter if backend returned it (free users only)
+            if let q = event.quota {
+                quotaUsed = q.used
+                quotaLimit = q.limit
+            }
 
             let latency = Date().timeIntervalSince(startTime)
             AnalyticsManager.shared.track(
@@ -389,6 +448,9 @@ final class CharacterChatViewModel: ObservableObject {
             removeStreamingPlaceholder()
             isStreaming = false
             isAtLimit = true
+            // Update quota display state
+            quotaUsed = event.used ?? quotaLimit
+            quotaLimit = event.limit ?? quotaLimit
 
             let limitMessage = event.message ?? "You've reached the free message limit for this character. Upgrade to Pro to keep chatting."
             messages.append(.quotaLimit(limitMessage))

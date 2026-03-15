@@ -16,6 +16,8 @@ struct CharacterCardView: View {
     @State private var character: CharacterCard?
     @State private var isLoadingDetails = false
     @State private var showChat = false
+    @State private var showPaywall = false
+    @State private var isQuotaExceeded = false
 
     var body: some View {
         ZStack {
@@ -65,6 +67,46 @@ struct CharacterCardView: View {
         }
         .cornerRadius(20)
         .shadow(color: .black.opacity(0.3), radius: 24, x: 0, y: 12)
+        .overlay {
+            if isQuotaExceeded {
+                ZStack {
+                    Color(.systemGray6).cornerRadius(20)
+                    VStack(spacing: 16) {
+                        Image(systemName: "star.fill")
+                            .font(.system(size: 36))
+                            .foregroundColor(.orange)
+                        Text("Monthly Limit Reached")
+                            .font(.headline)
+                        Text("You've used all 5 free character analyses this month. Upgrade to Pro for unlimited.")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal)
+                        Button("Upgrade to Pro") {
+                            showPaywall = true
+                        }
+                        .buttonStyle(.borderedProminent)
+                    }
+                    .padding()
+                    VStack {
+                        HStack {
+                            Spacer()
+                            Button { onDismiss() } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .font(.title2)
+                                    .foregroundStyle(.white, Color.black.opacity(0.3))
+                                    .padding(12)
+                            }
+                        }
+                        Spacer()
+                    }
+                }
+            }
+        }
+        .sheet(isPresented: $showPaywall) {
+            PaywallView(triggerReason: "Upgrade to Pro for unlimited character analyses.")
+                .environmentObject(StoreManager.shared)
+        }
         .onAppear {
             // Brief pause so the zoom animation completes before the flip starts
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
@@ -93,9 +135,10 @@ struct CharacterCardView: View {
         }
         isLoadingDetails = true
         Task {
-            let result = await viewModel.loadDetails(for: name)
+            let (result, quotaError) = await viewModel.loadDetails(for: name)
             await MainActor.run {
                 character = result
+                isQuotaExceeded = quotaError
                 isLoadingDetails = false
             }
         }

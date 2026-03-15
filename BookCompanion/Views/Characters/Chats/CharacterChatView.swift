@@ -25,6 +25,9 @@ struct CharacterChatView: View {
     // Report sheet
     @State private var showReport = false
 
+    // Paywall
+    @State private var showPaywall = false
+
     // Scroll proxy target — scroll to bottom after each new message
     @Namespace private var bottomID
 
@@ -61,7 +64,8 @@ struct CharacterChatView: View {
                             ForEach(viewModel.messages) { message in
                                 CharacterChatBubble(
                                     message: message,
-                                    characterName: character.fullName
+                                    characterName: character.fullName,
+                                    onUpgrade: { showPaywall = true }
                                 )
                             }
 
@@ -99,10 +103,18 @@ struct CharacterChatView: View {
                     }
                 }
 
+                // Quota counter — shown to free users only, hidden for Pro
+                if let used = viewModel.quotaUsed,
+                   let limit = viewModel.quotaLimit {
+                    QuotaCounterView(used: used, limit: limit, onUpgrade: {
+                        showPaywall = true
+                    })
+                }
+
                 // Input bar — disabled when at limit, safety ended, or streaming
                 CharacterChatInputBar(
                     text: $viewModel.inputText,
-                    isDisabled: viewModel.isAtLimit || viewModel.isSafetyEnded,
+                    isDisabled: viewModel.isAtLimit || viewModel.isSafetyEnded || viewModel.isStreaming,
                     onSend: viewModel.sendMessage
                 )
             }
@@ -132,6 +144,11 @@ struct CharacterChatView: View {
                 hasSeenChatDisclaimer = true
                 showDisclaimer = false
             }
+        }
+        // Paywall sheet
+        .sheet(isPresented: $showPaywall) {
+            PaywallView(triggerReason: "Upgrade to Pro for unlimited character chats.")
+                .environmentObject(StoreManager.shared)
         }
         // Report sheet
         .sheet(isPresented: $showReport) {
@@ -235,6 +252,53 @@ struct CharacterChatView: View {
             .foregroundColor(.secondary)
             .frame(maxWidth: .infinity)
             .padding(.vertical, Theme.Spacing.xs)
+    }
+}
+
+// MARK: - QuotaCounterView
+// Shown above the input bar for free users — subtle nudge, not a hard wall
+
+struct QuotaCounterView: View {
+    let used: Int
+    let limit: Int
+    let onUpgrade: () -> Void
+
+    private var remaining: Int { max(0, limit - used) }
+
+    private var progressColor: Color {
+        switch remaining {
+        case 0:      return Theme.Colors.error
+        case 1:      return Theme.Colors.warning
+        default:     return Theme.Colors.primary.opacity(0.7)
+        }
+    }
+
+    var body: some View {
+        HStack(spacing: Theme.Spacing.xs) {
+            // Progress dots
+            HStack(spacing: 3) {
+                ForEach(0..<limit, id: \.self) { i in
+                    Circle()
+                        .fill(i < used ? progressColor : Color.secondary.opacity(0.2))
+                        .frame(width: 6, height: 6)
+                }
+            }
+
+            Text("\(remaining) free message\(remaining == 1 ? "" : "s") left")
+                .font(.caption2)
+                .foregroundColor(.secondary)
+
+            Spacer()
+
+            Button("Go Pro") {
+                onUpgrade()
+            }
+            .font(.caption2.bold())
+            .foregroundColor(Theme.Colors.primary)
+        }
+        .padding(.horizontal, Theme.Spacing.md)
+        .padding(.vertical, 6)
+        .background(progressColor.opacity(0.06))
     }
 }
 

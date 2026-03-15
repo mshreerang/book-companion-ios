@@ -10,6 +10,7 @@ import SwiftUI
 struct CharacterChatBubble: View {
     let message: CharacterChatMessage
     let characterName: String
+    var onUpgrade: (() -> Void)? = nil   // called when user taps upgrade in quotaCard
 
     var body: some View {
         switch message.role {
@@ -180,7 +181,7 @@ struct CharacterChatBubble: View {
                 .foregroundColor(.secondary)
 
             Button("Upgrade to Pro →") {
-                // TODO: Hook into StoreKit paywall
+                onUpgrade?()
             }
             .font(.caption.bold())
             .foregroundColor(Theme.Colors.primary)
