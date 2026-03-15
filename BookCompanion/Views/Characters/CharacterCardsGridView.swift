@@ -4,6 +4,7 @@ struct CharacterCardsGridView: View {
     let book: Book
     let chapter: Int
     let language: String
+    let allBooks: [Book]
 
     @StateObject private var viewModel: CharacterCardsViewModel
     @Environment(\.dismiss) private var dismiss
@@ -20,14 +21,16 @@ struct CharacterCardsGridView: View {
         GridItem(.flexible(), spacing: 16)
     ]
 
-    init(book: Book, chapter: Int, language: String = "English") {
+    init(book: Book, chapter: Int, language: String = "English", allBooks: [Book] = []) {
         self.book = book
         self.chapter = chapter
         self.language = language
+        self.allBooks = allBooks
         self._viewModel = StateObject(wrappedValue: CharacterCardsViewModel(
             book: book,
             chapter: chapter,
-            language: language
+            language: language,
+            allBooks: allBooks
         ))
     }
 

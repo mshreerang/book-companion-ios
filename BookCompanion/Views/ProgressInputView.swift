@@ -46,6 +46,7 @@ struct ProgressInputView: View {
                     chapter: viewModel.selectedChapter,
                     language: viewModel.selectedLanguage,
                     length: viewModel.selectedLength,
+                    allBooks: viewModel.allBooks,
                     onAction: { viewModel.syncChapterToCloud() }
                 )
                 
@@ -288,6 +289,7 @@ struct SecondaryActionButton: View {
     let chapter: Int
     let language: Language
     let length: SummaryLength
+    let allBooks: [Book]
     let onAction: () -> Void
 
     var body: some View {
@@ -295,7 +297,8 @@ struct SecondaryActionButton: View {
             CharacterCardsGridView(
                 book: book,
                 chapter: chapter,
-                language: language.rawValue
+                language: language.rawValue,
+                allBooks: allBooks
             )
             .onAppear { onAction() }
         } label: {

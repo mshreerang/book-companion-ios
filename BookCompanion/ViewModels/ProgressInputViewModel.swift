@@ -88,6 +88,9 @@ final class ProgressInputViewModel: ObservableObject {
 
     /// Call this when the user generates a summary or views characters.
     /// Persists the current chapter to Supabase — one call, intentional action.
+    /// Exposes all library books for series context injection in character/summary calls.
+    var allBooks: [Book] { bookManager.books }
+
     func syncChapterToCloud() {
         let progress = ReadingProgress(
             id: currentProgressId,
