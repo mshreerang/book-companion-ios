@@ -2,53 +2,52 @@ import SwiftUI
 
 struct CharacterCardFront: View {
     let name: String
-    @Namespace private var namespace
-    
+
     var body: some View {
         ZStack {
-            // Gradient background
-            LinearGradient(
-                colors: [
-                    Color.blue.opacity(0.6),
-                    Color.purple.opacity(0.6)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            
-            VStack(spacing: 12) {
+            // Background — brand gradient diagonal for consistency
+            Theme.Colors.brandGradientDiagonal
+                .opacity(0.85)
+
+            VStack(spacing: 14) {
                 Spacer()
-                
-                // Character emoji/avatar placeholder
-                Text("👤")
-                    .font(.system(size: 50))
-                
-                // Character name
+
+                // CharacterAvatar gives each card a unique colour-coded
+                // initials circle — replaces the generic 👤 emoji.
+                // The avatar uses a stable hash so colours are consistent
+                // across app launches.
+                CharacterAvatar(name: name, size: 64)
+                    .shadow(color: .black.opacity(0.2), radius: 8, x: 0, y: 4)
+
                 Text(name)
                     .font(.headline)
                     .fontWeight(.semibold)
                     .foregroundColor(.white)
                     .multilineTextAlignment(.center)
                     .lineLimit(2)
-                    .matchedGeometryEffect(id: "name-\(name)", in: namespace)
-                
+                    .padding(.horizontal, 12)
+
                 Spacer()
-                
-                // Tap hint
-                Text("Tap to view details")
-                    .font(.caption2)
-                    .foregroundColor(.white.opacity(0.7))
-                    .padding(.bottom, 8)
+
+                // Subtle tap affordance — icon only, no text label
+                Image(systemName: "chevron.up.circle.fill")
+                    .font(.system(size: 18))
+                    .foregroundColor(.white.opacity(0.6))
+                    .padding(.bottom, 12)
             }
             .padding()
         }
-        .cornerRadius(16)
-        .shadow(color: .black.opacity(0.1), radius: 5, x: 0, y: 2)
+        .cornerRadius(Theme.CornerRadius.xl)
+        .shadow(color: Theme.Colors.brandShadow, radius: 6, x: 0, y: 3)
     }
 }
 
 #Preview {
-    CharacterCardFront(name: "Harry Potter")
-        .frame(width: 150, height: 200)
-        .padding()
+    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
+        CharacterCardFront(name: "Harry Potter")
+        CharacterCardFront(name: "Hermione Granger")
+        CharacterCardFront(name: "Ron Weasley")
+        CharacterCardFront(name: "Albus Dumbledore")
+    }
+    .padding()
 }

@@ -3,6 +3,9 @@
 //  BookCompanion
 //
 //  Created by Shree on 27/02/2026.
+//  Updated: chapter badge in character header uses Theme.Colors.secondary
+//           (brand teal) to match the identical spoiler-safe badge in
+//           CharacterCardsGridView and SummaryView.
 //
 
 import SwiftUI
@@ -18,17 +21,10 @@ struct CharacterChatView: View {
     @StateObject private var viewModel: CharacterChatViewModel
     @Environment(\.dismiss) private var dismiss
 
-    // Disclaimer gate — shown on first ever chat open, blocks interaction until accepted
     @AppStorage("hasSeenChatDisclaimer") private var hasSeenChatDisclaimer = false
     @State private var showDisclaimer = false
-
-    // Report sheet
     @State private var showReport = false
-
-    // Paywall
     @State private var showPaywall = false
-
-    // Scroll proxy target — scroll to bottom after each new message
     @Namespace private var bottomID
 
     init(character: CharacterCard, book: Book, chapter: Int, language: Language) {
@@ -49,7 +45,6 @@ struct CharacterChatView: View {
     var body: some View {
         NavigationView {
             VStack(spacing: 0) {
-                // Character header
                 characterHeader
                     .padding(.horizontal, Theme.Spacing.md)
                     .padding(.top, Theme.Spacing.sm)
@@ -57,7 +52,6 @@ struct CharacterChatView: View {
 
                 Divider()
 
-                // Message list
                 ScrollViewReader { proxy in
                     ScrollView {
                         LazyVStack(spacing: Theme.Spacing.sm) {
@@ -69,25 +63,20 @@ struct CharacterChatView: View {
                                 )
                             }
 
-                            // Suggested question chips —
-                            // shown only before the user has sent their first message
                             if viewModel.messages.count == 1,
                                let questions = character.suggestedQuestions,
                                !questions.isEmpty {
                                 suggestedChips(questions: questions)
                             }
 
-                            // Error banner (network/auth errors)
                             if let error = viewModel.error {
                                 errorBanner(error)
                             }
 
-                            // Safety ended card
                             if viewModel.isSafetyEnded {
                                 safetyEndedBanner
                             }
 
-                            // Invisible anchor for auto-scroll
                             Color.clear
                                 .frame(height: 1)
                                 .id(bottomID)
@@ -98,12 +87,10 @@ struct CharacterChatView: View {
                         withAnimation { proxy.scrollTo(bottomID, anchor: .bottom) }
                     }
                     .onChange(of: viewModel.messages.last?.content) {
-                        // Also scroll during streaming as content grows
                         proxy.scrollTo(bottomID, anchor: .bottom)
                     }
                 }
 
-                // Quota counter — shown to free users only, hidden for Pro
                 if let used = viewModel.quotaUsed,
                    let limit = viewModel.quotaLimit {
                     QuotaCounterView(used: used, limit: limit, onUpgrade: {
@@ -111,7 +98,6 @@ struct CharacterChatView: View {
                     })
                 }
 
-                // Input bar — disabled when at limit, safety ended, or streaming
                 CharacterChatInputBar(
                     text: $viewModel.inputText,
                     isDisabled: viewModel.isAtLimit || viewModel.isSafetyEnded || viewModel.isStreaming,
@@ -124,9 +110,7 @@ struct CharacterChatView: View {
                     Button("Done") { dismiss() }
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button {
-                        showReport = true
-                    } label: {
+                    Button { showReport = true } label: {
                         Image(systemName: "flag")
                             .foregroundColor(Theme.Colors.error)
                     }
@@ -134,28 +118,22 @@ struct CharacterChatView: View {
             }
         }
         .onAppear {
-            if !hasSeenChatDisclaimer {
-                showDisclaimer = true
-            }
+            if !hasSeenChatDisclaimer { showDisclaimer = true }
         }
-        // Disclaimer — blocks all interaction until accepted
         .fullScreenCover(isPresented: $showDisclaimer) {
             CharacterChatDisclaimerView {
                 hasSeenChatDisclaimer = true
                 showDisclaimer = false
             }
         }
-        // Paywall sheet
         .sheet(isPresented: $showPaywall) {
             PaywallView(triggerReason: "Upgrade to Pro for unlimited character chats.")
                 .environmentObject(StoreManager.shared)
         }
-        // Report sheet
         .sheet(isPresented: $showReport) {
             ReportSheetView(characterName: character.fullName) { reason, detail in
                 Task {
                     await viewModel.submitReport(reason: reason, detail: detail)
-                    // Small delay so user sees confirmation before dismiss
                     try? await Task.sleep(nanoseconds: 1_500_000_000)
                     dismiss()
                 }
@@ -167,7 +145,6 @@ struct CharacterChatView: View {
 
     private var characterHeader: some View {
         HStack(spacing: Theme.Spacing.sm) {
-            // Avatar
             Circle()
                 .fill(Theme.Colors.brandGradient)
                 .frame(width: 40, height: 40)
@@ -187,13 +164,15 @@ struct CharacterChatView: View {
 
             Spacer()
 
-            // Chapter badge
+            // Updated: Theme.Colors.secondary (brand teal) matches the
+            // identical "Ch. X" / spoiler-safe badge in CharacterCardsGridView
+            // and SummaryView — all three now use the same colour.
             Text("Ch. \(chapter)")
                 .font(.caption.bold())
                 .padding(.horizontal, Theme.Spacing.xs)
                 .padding(.vertical, 3)
-                .background(Color.green.opacity(0.15))
-                .foregroundColor(.green)
+                .background(Theme.Colors.secondary.opacity(0.12))
+                .foregroundColor(Theme.Colors.secondary)
                 .cornerRadius(Theme.CornerRadius.sm)
         }
     }
@@ -256,7 +235,6 @@ struct CharacterChatView: View {
 }
 
 // MARK: - QuotaCounterView
-// Shown above the input bar for free users — subtle nudge, not a hard wall
 
 struct QuotaCounterView: View {
     let used: Int
@@ -267,15 +245,14 @@ struct QuotaCounterView: View {
 
     private var progressColor: Color {
         switch remaining {
-        case 0:      return Theme.Colors.error
-        case 1:      return Theme.Colors.warning
-        default:     return Theme.Colors.primary.opacity(0.7)
+        case 0:  return Theme.Colors.error
+        case 1:  return Theme.Colors.warning
+        default: return Theme.Colors.primary.opacity(0.7)
         }
     }
 
     var body: some View {
         HStack(spacing: Theme.Spacing.xs) {
-            // Progress dots
             HStack(spacing: 3) {
                 ForEach(0..<limit, id: \.self) { i in
                     Circle()
@@ -290,11 +267,9 @@ struct QuotaCounterView: View {
 
             Spacer()
 
-            Button("Go Pro") {
-                onUpgrade()
-            }
-            .font(.caption2.bold())
-            .foregroundColor(Theme.Colors.primary)
+            Button("Go Pro") { onUpgrade() }
+                .font(.caption2.bold())
+                .foregroundColor(Theme.Colors.primary)
         }
         .padding(.horizontal, Theme.Spacing.md)
         .padding(.vertical, 6)
@@ -349,17 +324,12 @@ struct CharacterChatDisclaimerView: View {
 
             Button(action: onAccept) {
                 Text("I understand — Start Chatting")
-                    .font(.headline)
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, Theme.Spacing.sm)
-                    .background(Theme.Colors.brandGradient)
-                    .cornerRadius(Theme.CornerRadius.lg)
             }
+            .buttonStyle(BrandGradientButtonStyle())
             .padding(.horizontal, Theme.Spacing.xl)
             .padding(.bottom, Theme.Spacing.xxl)
         }
-        .interactiveDismissDisabled(true)   // must tap the CTA, no swipe-to-dismiss
+        .interactiveDismissDisabled(true)
     }
 }
 
@@ -374,17 +344,12 @@ struct ReportSheetView: View {
     @State private var detail = ""
     @State private var submitted = false
 
-    private let reasons = [
-        "Inappropriate content",
-        "Unsafe response",
-        "Other"
-    ]
+    private let reasons = ["Inappropriate content", "Unsafe response", "Other"]
 
     var body: some View {
         NavigationView {
             VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
                 if submitted {
-                    // Confirmation state
                     VStack(spacing: Theme.Spacing.md) {
                         Spacer()
                         Image(systemName: "checkmark.circle.fill")
@@ -399,7 +364,6 @@ struct ReportSheetView: View {
                     }
                     .frame(maxWidth: .infinity)
                 } else {
-                    // Report form
                     Text("What's the issue with this conversation?")
                         .font(.subheadline)
                         .foregroundColor(.secondary)

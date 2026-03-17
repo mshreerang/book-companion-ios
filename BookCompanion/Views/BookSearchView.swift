@@ -8,7 +8,7 @@ struct BookSearchView: View {
     @ObservedObject var bookManager: BookManager
     @State private var showingAddBook = false
     @State private var showingSettings = false
-    
+
     private let makeProgressViewModel: (Book) -> ProgressInputViewModel
     private let makeSummaryViewModel: (Book, Language, SummaryLength) -> SummaryViewModel
     private let makeCharactersViewModel: (Book, Language) -> CharactersViewModel
@@ -29,90 +29,48 @@ struct BookSearchView: View {
         self.makeCharactersViewModel = makeCharactersViewModel
     }
 
-    // ✅ Simplified filter - broken into separate steps
-    private var filteredBooks: [Book] {
-        let searchText = viewModel.searchText
-        let allBooks = viewModel.books
-        
-        guard !searchText.isEmpty else {
-            return allBooks
-        }
+    // MARK: - Derived state
 
-        return allBooks.filter { book in
-            let matchesTitle = book.title.localizedCaseInsensitiveContains(searchText)
-            let matchesAuthor = book.author.localizedCaseInsensitiveContains(searchText)
-            return matchesTitle || matchesAuthor
+    private var isLibraryEmpty: Bool {
+        viewModel.books.isEmpty && viewModel.searchText.isEmpty
+    }
+
+    private var filteredBooks: [Book] {
+        guard !viewModel.searchText.isEmpty else { return viewModel.books }
+        return viewModel.books.filter {
+            $0.title.localizedCaseInsensitiveContains(viewModel.searchText) ||
+            $0.author.localizedCaseInsensitiveContains(viewModel.searchText)
         }
     }
 
+    // MARK: - Body
+
     var body: some View {
-        VStack(spacing: 0) {
-            if filteredBooks.isEmpty && viewModel.searchText.isEmpty {
-                // ✅ IMPROVED: Empty state - no books at all
-                EmptyLibraryView(onAddBook: {
-                    showingAddBook = true
-                })
+        // Wrap in a Group so we can conditionally attach .searchable
+        Group {
+            if isLibraryEmpty {
+                // Empty library — clean slate, single CTA, no FAB, no search bar
+                EmptyLibraryView(onAddBook: { showingAddBook = true })
             } else if filteredBooks.isEmpty {
-                // ✅ IMPROVED: Empty state - search found nothing
+                // Search returned nothing
                 EmptySearchResultsView(searchQuery: viewModel.searchText)
             } else {
-                // Show books in card layout
-                ScrollView {
-                    LazyVStack(spacing: 16) {
-                        ForEach(filteredBooks) { book in
-                            NavigationLink {
-                                ProgressInputView(
-                                    viewModel: makeProgressViewModel(book),
-                                    makeSummaryViewModel: makeSummaryViewModel,
-                                    makeCharactersViewModel: makeCharactersViewModel
-                                )
-                                .onDisappear {
-                                    bookManager.reloadProgress()
-                                }
-                                .onAppear {
-                                    // ✅ ANALYTICS: Track book opened
-                                    AnalyticsManager.shared.track(
-                                        event: "book_opened",
-                                        properties: [
-                                            "book_title": book.title,
-                                            "author": book.author
-                                        ]
-                                    )
-                                }
-                            } label: {
-                                BookCard(book: book)
-                            }
-                            .buttonStyle(.plain)
-                            .contextMenu {
-                                Button(role: .destructive) {
-                                    deleteBook(book)
-                                } label: {
-                                    Label("Delete", systemImage: "trash")
-                                }
-                            }
-                        }
-                    }
-                    .padding()
-                    .padding(.bottom, 80) // Space for FAB
-                }
-                .refreshable {
-                    // ✅ PULL TO REFRESH - Sync books from cloud
-                    await bookManager.syncFromCloud()
-                }
+                bookList
             }
         }
         .navigationTitle("My Library")
-        .searchable(text: $viewModel.searchText, prompt: "Search your library...")
+        // Search bar only appears when there are books to search
+        .if(!isLibraryEmpty) { view in
+            view.searchable(text: $viewModel.searchText, prompt: "Search your library…")
+        }
         .toolbar {
-                        
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button {
                     showingSettings = true
-                    
-                    // ✅ ANALYTICS: Track settings opened
                     AnalyticsManager.shared.track(event: "settings_opened")
                 } label: {
                     Image(systemName: "gear")
+                        .font(.system(size: 16, weight: .medium))
                 }
                 .accessibleButton(
                     label: A11y.Library.settingsButton,
@@ -123,91 +81,126 @@ struct BookSearchView: View {
         .sheet(isPresented: $showingAddBook) {
             UnifiedSearchView()
                 .environmentObject(bookManager)
-                .onDisappear {
-                    // ✅ ANALYTICS: Track if book was added (check if count increased)
-                    // This will be tracked in the actual book add function
-                }
         }
         .sheet(isPresented: $showingSettings) {
             SettingsView(settingsManager: settingsManager)
         }
+        // FAB + mode badge — hidden on empty state
         .overlay(alignment: .bottomTrailing) {
-            fabButton
+            if !isLibraryEmpty {
+                fabStack
+                    .transition(.scale.combined(with: .opacity))
+            }
         }
     }
-    
-    // ✅ Extracted FAB to separate computed property
-    private var fabButton: some View {
-        VStack(alignment: .trailing, spacing: 12) {
-            // Floating Action Button (FAB)
-            Button(action: {
+
+    // MARK: - Book list
+
+    private var bookList: some View {
+        ScrollView {
+            LazyVStack(spacing: 16) {
+                ForEach(filteredBooks) { book in
+                    NavigationLink {
+                        ProgressInputView(
+                            viewModel: makeProgressViewModel(book),
+                            makeSummaryViewModel: makeSummaryViewModel,
+                            makeCharactersViewModel: makeCharactersViewModel
+                        )
+                        .onDisappear { bookManager.reloadProgress() }
+                        .onAppear {
+                            AnalyticsManager.shared.track(
+                                event: "book_opened",
+                                properties: ["book_title": book.title, "author": book.author]
+                            )
+                        }
+                    } label: {
+                        BookCard(book: book)
+                    }
+                    .buttonStyle(.plain)
+                    .contextMenu {
+                        Button(role: .destructive) {
+                            deleteBook(book)
+                        } label: {
+                            Label("Delete", systemImage: "trash")
+                        }
+                    }
+                }
+            }
+            .padding()
+            .padding(.bottom, 88) // clearance for FAB
+        }
+        .refreshable {
+            await bookManager.syncFromCloud()
+        }
+    }
+
+    // MARK: - FAB + mode badge
+
+    private var fabStack: some View {
+        VStack(alignment: .trailing, spacing: 10) {
+            Button {
                 HapticManager.lightImpact()
                 showingAddBook = true
-                
-                // ✅ ANALYTICS: Track search button tapped
                 AnalyticsManager.shared.track(event: "add_book_button_tapped")
-            }) {
+            } label: {
                 Image(systemName: "plus")
                     .font(.title3.weight(.semibold))
                     .foregroundColor(.white)
                     .frame(width: 56, height: 56)
-                    .background(
-                        LinearGradient(
-                            colors: [Color.blue, Color.purple],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
+                    .background(Theme.Colors.brandGradient)
                     .clipShape(Circle())
-                    .shadow(color: .black.opacity(0.3), radius: 8, x: 0, y: 4)
+                    .shadow(color: Theme.Colors.brandShadow, radius: 8, x: 0, y: 4)
             }
             .accessibleButton(
                 label: A11y.Library.searchButton,
                 hint: "Open book search"
             )
-            
-            // Mode badge
+
             modeBadge
         }
         .padding(20)
     }
-    
-    // ✅ Extracted mode badge to separate computed property
+
+    // MARK: - Mode badge
+    // Uses brand teal for AI mode (not generic green), brand indigo for offline.
+
     private var modeBadge: some View {
-        Group {
-            if settingsManager.settings.isAIEnabled {
-                Text("AI")
-                    .font(.caption2.weight(.medium))
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(.green)
-                    .foregroundColor(.white)
-                    .cornerRadius(8)
-            } else {
-                Text("Offline")
-                    .font(.caption2.weight(.medium))
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(.blue)
-                    .foregroundColor(.white)
-                    .cornerRadius(8)
-            }
-        }
+        Text(settingsManager.settings.isAIEnabled ? "AI" : "Offline")
+            .font(.caption2.weight(.semibold))
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(
+                settingsManager.settings.isAIEnabled
+                    ? Theme.Colors.secondary   // teal
+                    : Theme.Colors.primary     // indigo
+            )
+            .foregroundColor(.white)
+            .cornerRadius(Theme.CornerRadius.sm)
     }
-    
-    // ✅ Extracted delete logic
+
+    // MARK: - Delete
+
     private func deleteBook(_ book: Book) {
-        // ✅ ANALYTICS: Track book deleted
         AnalyticsManager.shared.track(
             event: "book_deleted",
-            properties: [
-                "book_title": book.title,
-                "author": book.author
-            ]
+            properties: ["book_title": book.title, "author": book.author]
         )
-        
         if let index = bookManager.books.firstIndex(where: { $0.id == book.id }) {
             bookManager.deleteBooks(at: IndexSet(integer: index))
+        }
+    }
+}
+
+// MARK: - Conditional modifier helper
+// Allows .if(!condition) { view in view.searchable(...) }
+
+extension View {
+    @ViewBuilder
+    func `if`<Content: View>(_ condition: Bool, transform: (Self) -> Content) -> some View {
+        if condition {
+            transform(self)
+        } else {
+            self
         }
     }
 }

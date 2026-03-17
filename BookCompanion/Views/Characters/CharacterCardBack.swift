@@ -14,7 +14,7 @@ struct CharacterCardBack: View {
             if isLoading {
                 VStack(spacing: 16) {
                     ProgressView().scaleEffect(1.2)
-                    Text("Analysing character...")
+                    Text("Analysing character…")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
@@ -34,19 +34,15 @@ struct CharacterCardBack: View {
         .cornerRadius(20)
     }
 
-    // MARK: - Loaded content
+    // MARK: - Loaded Content
 
-    // Key layout: VStack with ScrollView on top and the Chat button
-    // PINNED at the bottom — it never scrolls out of view no matter how
-    // long the character summary is.
     private func loadedContent(_ character: CharacterCard) -> some View {
         VStack(spacing: 0) {
 
-            // ── Scrollable details ────────────────────────────────────────
+            // Scrollable details
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
 
-                    // Header
                     VStack(alignment: .leading, spacing: 4) {
                         Text(character.fullName)
                             .font(.title3.bold())
@@ -67,7 +63,7 @@ struct CharacterCardBack: View {
                         InfoSection(
                             title: "Development So Far",
                             icon: "arrow.up.forward.circle.fill",
-                            color: .purple,
+                            color: Theme.Colors.primary,
                             content: evolution
                         )
                     }
@@ -76,7 +72,7 @@ struct CharacterCardBack: View {
                         InfoSection(
                             title: "About",
                             icon: "person.fill",
-                            color: .blue,
+                            color: Theme.Colors.secondary,
                             content: description
                         )
                     }
@@ -85,27 +81,28 @@ struct CharacterCardBack: View {
                         InfoSection(
                             title: "Relationships",
                             icon: "person.2.fill",
-                            color: .green,
+                            color: Theme.Colors.primary,
                             content: relationships
                         )
                     }
 
-                    // Bottom breathing room so the last section
-                    // isn't flush against the button divider
                     Spacer(minLength: 12)
                 }
                 .padding(16)
             }
 
-            // ── Pinned footer — ALWAYS VISIBLE ────────────────────────────
-            // Sits outside the ScrollView so it can never be scrolled away.
+            // Pinned footer — chat button always visible, never scrolls away
             if FeatureFlags.characterChat {
                 chatButton(character)
             }
         }
     }
 
-    // MARK: - Chat button
+    // MARK: - Chat Button
+    //
+    // Updated: uses Theme.Colors.brandGradient instead of hardcoded
+    // [Color.blue, Color.purple] — the last remaining hardcoded gradient
+    // in the character feature.
 
     private func chatButton(_ character: CharacterCard) -> some View {
         VStack(spacing: 0) {
@@ -121,18 +118,11 @@ struct CharacterCardBack: View {
                 .font(.subheadline)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 14)
-                .background(
-                    LinearGradient(
-                        colors: [Color.blue.opacity(0.85), Color.purple.opacity(0.85)],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
-                )
+                .background(Theme.Colors.brandGradient)
                 .foregroundColor(.white)
                 .cornerRadius(0) // card corners clip this at the bottom
             }
         }
-        // Clip to the card's bottom corners only
         .clipShape(
             RoundedCorner(radius: 20, corners: [.bottomLeft, .bottomRight])
         )
@@ -167,7 +157,7 @@ struct InfoSection: View {
     }
 }
 
-// MARK: - RoundedCorner shape (used by chat button footer)
+// MARK: - RoundedCorner Shape
 
 private struct RoundedCorner: Shape {
     var radius: CGFloat
@@ -190,9 +180,9 @@ private struct RoundedCorner: Shape {
         character: CharacterCard(
             id: "1",
             fullName: "Hermione Granger",
-            description: "The brightest witch of her age, fiercely loyal and principled. She holds herself and others to the highest standards and is not afraid to speak up, even when it makes her unpopular.",
-            relationships: "Best friends with Harry Potter and Ron Weasley. Has a complicated rivalry with Draco Malfoy. Deeply respected by Dumbledore.",
-            currentSituation: "Currently in her fourth year and visibly distressed by the Triwizard Tournament. She alone believes Harry did not put his own name in the Goblet of Fire and is working tirelessly to help him prepare for the tasks.",
+            description: "The brightest witch of her age, fiercely loyal and principled.",
+            relationships: "Best friends with Harry Potter and Ron Weasley.",
+            currentSituation: "Currently in her fourth year, distressed by the Triwizard Tournament.",
             role: "Deuteragonist"
         ),
         isLoading: false,

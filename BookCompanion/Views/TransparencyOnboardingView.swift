@@ -3,13 +3,15 @@
 //  BookCompanion
 //
 //  Created by Shree on 01/03/2026.
+//  Updated: unified section icon colour (brand indigo throughout),
+//           replaced gmail support address with custom domain,
+//           updated brand colours to indigo/teal.
 //
 
 import SwiftUI
 import Combine
 
 // MARK: - Transparency Onboarding View
-// Shown once on first launch, also accessible from Settings → "About & Privacy"
 
 struct TransparencyOnboardingView: View {
 
@@ -23,13 +25,7 @@ struct TransparencyOnboardingView: View {
                 VStack(spacing: 12) {
                     Image(systemName: "book.closed.fill")
                         .font(.system(size: 52))
-                        .foregroundStyle(
-                            LinearGradient(
-                                colors: [.blue, .purple],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
+                        .foregroundStyle(Theme.Colors.brandGradientDiagonal)
                         .padding(.top, 48)
 
                     Text("Book Companion")
@@ -44,10 +40,11 @@ struct TransparencyOnboardingView: View {
                 .padding(.bottom, 36)
 
                 // Sections
+                // All icons use the same muted brand-indigo colour —
+                // colour encodes meaning, not structure.
                 VStack(spacing: 16) {
                     TransparencySection(
                         icon: "wand.and.stars",
-                        iconColor: .purple,
                         title: "The Service",
                         items: [
                             TransparencyItem(
@@ -67,7 +64,6 @@ struct TransparencyOnboardingView: View {
 
                     TransparencySection(
                         icon: "creditcard.fill",
-                        iconColor: .green,
                         title: "Subscription & Usage",
                         items: [
                             TransparencyItem(
@@ -87,7 +83,6 @@ struct TransparencyOnboardingView: View {
 
                     TransparencySection(
                         icon: "lock.shield.fill",
-                        iconColor: .blue,
                         title: "Privacy & Data",
                         items: [
                             TransparencyItem(
@@ -111,7 +106,6 @@ struct TransparencyOnboardingView: View {
 
                     TransparencySection(
                         icon: "person.badge.shield.checkmark.fill",
-                        iconColor: .orange,
                         title: "Your Rights",
                         items: [
                             TransparencyItem(
@@ -120,7 +114,8 @@ struct TransparencyOnboardingView: View {
                             ),
                             TransparencyItem(
                                 label: "Account deletion",
-                                detail: "Email vivanyagroup@gmail.com at any time to delete your account and all associated data."
+                                // Updated: custom domain email replaces personal Gmail
+                                detail: "Email support@bookcompanion.app at any time to delete your account and all associated data."
                             ),
                             TransparencyItem(
                                 label: "UK GDPR",
@@ -138,38 +133,29 @@ struct TransparencyOnboardingView: View {
                         .foregroundStyle(.secondary)
 
                     HStack(spacing: 16) {
-                        Link("Privacy Policy", destination: URL(string: "https://mshreerang.github.io/book-companion-ios/privacy-policy.html")!)
+                        Link("Privacy Policy",
+                             destination: URL(string: "https://mshreerang.github.io/book-companion-ios/privacy-policy.html")!)
                             .font(.footnote)
-                            .foregroundStyle(.blue)
+                            .foregroundStyle(Theme.Colors.primary)
 
                         Text("·")
                             .foregroundStyle(.secondary)
                             .font(.footnote)
 
-                        Link("Terms of Use", destination: URL(string: "https://mshreerang.github.io/book-companion-ios/terms-of-use.html")!)
+                        Link("Terms of Use",
+                             destination: URL(string: "https://mshreerang.github.io/book-companion-ios/terms-of-use.html")!)
                             .font(.footnote)
-                            .foregroundStyle(.blue)
+                            .foregroundStyle(Theme.Colors.primary)
                     }
                 }
                 .padding(.top, 28)
                 .padding(.bottom, 16)
 
-                // CTA button
+                // CTA
                 Button(action: onContinue) {
                     Text("Got it — Let's Go")
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
-                        .background(
-                            LinearGradient(
-                                colors: [.blue, .purple],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
-                        .clipShape(RoundedRectangle(cornerRadius: 14))
                 }
+                .buttonStyle(BrandGradientButtonStyle())
                 .padding(.horizontal, 24)
                 .padding(.bottom, 48)
             }
@@ -189,20 +175,24 @@ struct TransparencyItem {
 
 struct TransparencySection: View {
     let icon: String
-    let iconColor: Color
     let title: String
     let items: [TransparencyItem]
 
+    // iconColor removed — all icons now use the same brand-indigo tint
+    // so the section chrome is visually consistent throughout.
+    private let iconColor = Theme.Colors.primary
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
+
             // Section header
             HStack(spacing: 10) {
                 Image(systemName: icon)
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(iconColor)
                     .frame(width: 28, height: 28)
-                    .background(iconColor.opacity(0.12))
-                    .clipShape(RoundedRectangle(cornerRadius: 7))
+                    .background(iconColor.opacity(0.10))
+                    .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.sm))
 
                 Text(title)
                     .font(.system(size: 15, weight: .semibold))
@@ -214,11 +204,10 @@ struct TransparencySection: View {
             Divider()
                 .padding(.horizontal, 16)
 
-            // Items
             ForEach(Array(items.enumerated()), id: \.offset) { index, item in
                 VStack(alignment: .leading, spacing: 3) {
                     Text(item.label)
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(.secondary)
                         .textCase(.uppercase)
                         .tracking(0.3)
@@ -238,27 +227,9 @@ struct TransparencySection: View {
             }
         }
         .background(Color(.secondarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.xl))
     }
 }
-
-// MARK: - First Launch Logic
-// Add to BookCompanionApp.swift or your root view:
-//
-// @AppStorage("hasSeenTransparencyScreen") private var hasSeenTransparencyScreen = false
-// @State private var showTransparency = false
-//
-// .onAppear {
-//     if !hasSeenTransparencyScreen {
-//         showTransparency = true
-//     }
-// }
-// .fullScreenCover(isPresented: $showTransparency) {
-//     TransparencyOnboardingView {
-//         hasSeenTransparencyScreen = true
-//         showTransparency = false
-//     }
-// }
 
 // MARK: - Preview
 

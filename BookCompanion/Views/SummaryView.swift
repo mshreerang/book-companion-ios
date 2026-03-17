@@ -2,19 +2,17 @@ import SwiftUI
 
 struct SummaryView: View {
     @StateObject private var viewModel: SummaryViewModel
-    
+
     let chapter: Int
     let bookTitle: String
     let author: String
     let book: Book
     let language: Language
-    
+
     @State private var showingShareSheet = false
-    @State private var showNarratorSheet = false
     @EnvironmentObject private var storeManager: StoreManager
     @ObservedObject private var ttsManager = TextToSpeechManager.shared
 
-    // Random loading message for variety during generation
     private let loadingMessage = LoadingMessages.randomSummaryMessage()
 
     init(
@@ -35,40 +33,64 @@ struct SummaryView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            
-            // Quota nudge banner — shown when 1 free summary remains
+
+            // Quota nudge
             if viewModel.showQuotaNudge {
                 QuotaNudgeBanner(isShowing: $viewModel.showQuotaNudge)
                     .transition(.move(edge: .top).combined(with: .opacity))
                     .animation(.spring(response: 0.4, dampingFraction: 0.8), value: viewModel.showQuotaNudge)
             }
 
-            // ✅ STATUS BADGES
+            // Status badges row
             if viewModel.error == nil && !viewModel.isLoading {
-                HStack(spacing: 8) {
+                HStack(spacing: 6) {
+
+                    // Spoiler-safe badge
                     Text("Safe up to Chapter \(chapter)")
                         .font(.caption.bold())
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
-                        .background(Color.green.opacity(0.15))
-                        .foregroundColor(.green)
-                        .cornerRadius(6)
-                    
+                        .background(Theme.Colors.secondary.opacity(0.12))
+                        .foregroundColor(Theme.Colors.secondary)
+                        .cornerRadius(Theme.CornerRadius.xs)
+
+                    // Cached badge
                     if viewModel.isCached {
                         Text("Cached")
                             .font(.caption.bold())
                             .padding(.horizontal, 8)
                             .padding(.vertical, 4)
-                            .background(Color.blue.opacity(0.1))
-                            .foregroundColor(.blue)
-                            .cornerRadius(6)
+                            .background(Theme.Colors.primary.opacity(0.10))
+                            .foregroundColor(Theme.Colors.primary)
+                            .cornerRadius(Theme.CornerRadius.xs)
+                    }
+
+                    // Series context badge — shown when:
+                    // 1. Book is in a series
+                    // 2. Book is not the first entry (context only meaningful from book 2+)
+                    //    OR has completed prior books to reference
+                    // Tells the user the AI is aware of earlier books in the series.
+                    if let seriesName = book.seriesName,
+                       let position = book.seriesPosition,
+                       position > 1 {
+                        HStack(spacing: 3) {
+                            Image(systemName: "books.vertical.fill")
+                                .font(.system(size: 8, weight: .semibold))
+                            Text("Series context: \(seriesName)")
+                                .font(.caption.bold())
+                                .lineLimit(1)
+                        }
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Theme.Colors.primary.opacity(0.10))
+                        .foregroundColor(Theme.Colors.primary)
+                        .cornerRadius(Theme.CornerRadius.xs)
                     }
                 }
                 .padding(.horizontal)
                 .padding(.top, 8)
             }
-            
-            // ✅ CONTENT AREA
+
             Group {
                 if viewModel.isLoading {
                     loadingContent
@@ -79,9 +101,6 @@ struct SummaryView: View {
                 }
             }
 
-            // ── Active Narrator — mini player floats above safe area ──────
-            // Always rendered when Vani is active so it persists while scrolling.
-            // Tap → expands to full sheet. X → dismisses.
             if isVaniActive {
                 ActiveNarratorView(
                     viewModel:        viewModel.vaniPlayer,
@@ -113,7 +132,6 @@ struct SummaryView: View {
                 toolbarButtons
             }
         }
-        // Re-generate if chapter changes
         .task(id: chapter) {
             await viewModel.generate(chapter: chapter)
         }
@@ -122,7 +140,6 @@ struct SummaryView: View {
                 ShareSheet(items: [formatSummaryForSharing(summary)])
             }
         }
-        // Paywall — shown only on explicit 429, never on network errors
         .sheet(isPresented: $viewModel.showPaywall) {
             PaywallView(triggerReason: viewModel.paywallTriggerReason)
                 .environmentObject(storeManager)
@@ -131,8 +148,6 @@ struct SummaryView: View {
 
     // MARK: - Vani Active Check
 
-    /// Show the narrator bar as soon as loading starts.
-    /// Visible during skeleton, streaming, and after summary loads.
     private var isVaniActive: Bool {
         if viewModel.isLoading || viewModel.isStreaming { return true }
         guard viewModel.summary != nil else { return false }
@@ -141,49 +156,64 @@ struct SummaryView: View {
         default:        return true
         }
     }
-    
-    // MARK: - Subviews
-    
+
+    // MARK: - Summary Content
+
     private func summaryContent(_ content: String) -> some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                // ✅ Parse Markdown but preserve spacing
-                let sections = parseSummaryWithMarkdown(content)
-                ForEach(sections.indices, id: \.self) { index in
-                    let section = sections[index]
-                    Text(section.text)
-                        .font(section.isHeader ? .headline : .body)
-                        .fontWeight(section.isHeader ? .bold : .regular)
-                        .lineSpacing(4)
+            VStack(alignment: .leading, spacing: 14) {
+                ForEach(Array(parsedLines(content).enumerated()), id: \.offset) { _, line in
+                    line.view
                         .textSelection(.enabled)
                 }
             }
             .padding()
-            // Add bottom padding so content isn't hidden behind ActiveNarratorView
             .padding(.bottom, isVaniActive ? 88 : 0)
         }
     }
-    
-    // ✅ Helper: Parse summary and handle headers manually
-    private func parseSummaryWithMarkdown(_ content: String) -> [(text: String, isHeader: Bool)] {
-        var result: [(text: String, isHeader: Bool)] = []
-        let lines = content.components(separatedBy: "\n")
-        
-        for line in lines {
-            let trimmed = line.trimmingCharacters(in: .whitespaces)
-            if trimmed.isEmpty { continue }
-            
-            // Check if it's a header (starts with ###)
-            if trimmed.hasPrefix("###") {
-                let headerText = trimmed.replacingOccurrences(of: "###", with: "").trimmingCharacters(in: .whitespaces)
-                result.append((text: headerText, isHeader: true))
-            } else {
-                result.append((text: trimmed, isHeader: false))
-            }
-        }
-        
-        return result
+
+    private struct ParsedLine {
+        let view: AnyView
     }
+
+    private func parsedLines(_ content: String) -> [ParsedLine] {
+        content
+            .components(separatedBy: "\n")
+            .compactMap { raw -> ParsedLine? in
+                let trimmed = raw.trimmingCharacters(in: .whitespaces)
+                guard !trimmed.isEmpty else { return nil }
+
+                if trimmed.hasPrefix("###") {
+                    let text = trimmed
+                        .replacingOccurrences(of: "^#{1,6}\\s*", with: "", options: .regularExpression)
+                    return ParsedLine(view: AnyView(
+                        Text(text)
+                            .font(.headline)
+                            .fontWeight(.bold)
+                            .lineSpacing(2)
+                    ))
+                }
+
+                if let attributed = try? AttributedString(
+                    markdown: trimmed,
+                    options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace)
+                ) {
+                    return ParsedLine(view: AnyView(
+                        Text(attributed)
+                            .font(.body)
+                            .lineSpacing(4)
+                    ))
+                }
+
+                return ParsedLine(view: AnyView(
+                    Text(trimmed)
+                        .font(.body)
+                        .lineSpacing(4)
+                ))
+            }
+    }
+
+    // MARK: - Loading
 
     private var loadingContent: some View {
         VStack(spacing: 16) {
@@ -196,7 +226,9 @@ struct SummaryView: View {
             SummarySkeleton()
         }
     }
-    
+
+    // MARK: - Error
+
     private func errorView(_ error: Error) -> some View {
         VStack(spacing: 16) {
             Spacer()
@@ -213,35 +245,35 @@ struct SummaryView: View {
                 Task { await viewModel.generate(chapter: chapter) }
             }
             .buttonStyle(.borderedProminent)
+            .tint(Theme.Colors.primary)
             Spacer()
         }
         .padding()
     }
 
+    // MARK: - Toolbar
+
     private var toolbarButtons: some View {
-        HStack {
-            // Share Button
-            Button {
-                showingShareSheet = true
-            } label: {
-                Image(systemName: "square.and.arrow.up")
-            }
-            .disabled(viewModel.summary == nil)
+        Button {
+            showingShareSheet = true
+        } label: {
+            Image(systemName: "square.and.arrow.up")
         }
+        .disabled(viewModel.summary == nil)
     }
-    
-    // MARK: - Helpers
-    
+
+    // MARK: - Share formatting
+
     private func formatSummaryForSharing(_ summary: BookSummary) -> String {
         let header = author.isEmpty
             ? "📖 \(bookTitle)\nChapter \(chapter)"
             : "📖 \(bookTitle) by \(author)\nChapter \(chapter)"
-        
+
         return """
         \(header)
-        
+
         \(summary.content)
-        
+
         ---
         Generated by BookCompanion
         """
@@ -272,26 +304,25 @@ struct QuotaNudgeBanner: View {
         }
         .padding(12)
         .background(.ultraThinMaterial)
-        .cornerRadius(10)
+        .cornerRadius(Theme.CornerRadius.md)
         .padding(.horizontal, 16)
         .padding(.top, 8)
         .onAppear {
-            // Auto-dismiss after 5 seconds
-            DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 10) {
                 withAnimation { isShowing = false }
             }
         }
     }
 }
 
-// MARK: - Share Sheet Helper
+// MARK: - Share Sheet
 
 struct ShareSheet: UIViewControllerRepresentable {
     let items: [Any]
-    
+
     func makeUIViewController(context: Context) -> UIActivityViewController {
         UIActivityViewController(activityItems: items, applicationActivities: nil)
     }
-    
+
     func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }

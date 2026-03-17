@@ -3,60 +3,55 @@
 //  BookCompanion
 //
 //  Created by Shree on 06/02/2026.
+//  Updated: ConfirmBookView chapter input now uses TextField + stepper
+//           (same pattern as AddBookView) so users aren't forced to
+//           tap a Stepper 40+ times for longer books.
 //
 
 import SwiftUI
 
 struct SearchBooksView: View {
-    
+
     @Environment(\.dismiss) var dismiss
     @ObservedObject var bookManager: BookManager
-    
+
     @State private var searchText = ""
     @State private var results: [BookSearchResult] = []
     @State private var isSearching = false
     @State private var searchError: Error?
     @State private var selectedBook: BookSearchResult?
 
-    
     private let searchService = BookSearchService()
-    
+
     var body: some View {
         NavigationStack {
             Group {
                 if results.isEmpty && !isSearching && searchText.isEmpty {
-                    // Initial state
                     ContentUnavailableView {
                         Label("Search for Books", systemImage: "magnifyingglass")
                     } description: {
                         Text("Search by title or author to find books")
                     }
                 } else if isSearching {
-                    // Loading
                     VStack(spacing: 16) {
                         ProgressView()
-                        Text("Searching...")
+                        Text("Searching…")
                             .foregroundColor(.secondary)
                     }
                 } else if let error = searchError {
-                    // Error
                     ContentUnavailableView {
                         Label("Search Failed", systemImage: "exclamationmark.triangle")
                     } description: {
                         Text(error.localizedDescription)
                     } actions: {
                         Button("Try Again") {
-                            Task {
-                                await performSearch()
-                            }
+                            Task { await performSearch() }
                         }
                     }
                 } else if results.isEmpty {
-                    // No results
                     ContentUnavailableView.search(text: searchText)
                 } else {
-                    // Results — split into Best Match and Other Results
-                    let bestMatches = results.filter { $0.section == "bestMatch" }
+                    let bestMatches  = results.filter { $0.section == "bestMatch" }
                     let otherResults = results.filter { $0.section == "otherResults" }
 
                     List {
@@ -65,21 +60,16 @@ struct SearchBooksView: View {
                                 ForEach(bestMatches) { result in
                                     BookSearchResultRow(result: result)
                                         .contentShape(Rectangle())
-                                        .onTapGesture {
-                                            selectedBook = result
-                                        }
+                                        .onTapGesture { selectedBook = result }
                                 }
                             }
                         }
-
                         if !otherResults.isEmpty {
                             Section("Other Results") {
                                 ForEach(otherResults) { result in
                                     BookSearchResultRow(result: result)
                                         .contentShape(Rectangle())
-                                        .onTapGesture {
-                                            selectedBook = result
-                                        }
+                                        .onTapGesture { selectedBook = result }
                                 }
                             }
                         }
@@ -91,19 +81,14 @@ struct SearchBooksView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
+                    Button("Cancel") { dismiss() }
                 }
             }
-            .searchable(text: $searchText, prompt: "Search books...")
+            .searchable(text: $searchText, prompt: "Search books…")
             .onSubmit(of: .search) {
-                Task {
-                    await performSearch()
-                }
+                Task { await performSearch() }
             }
             .onChange(of: searchText) { oldValue, newValue in
-                // Auto-search after 0.5 second delay
                 Task {
                     try? await Task.sleep(nanoseconds: 500_000_000)
                     if searchText == newValue && !newValue.isEmpty {
@@ -123,24 +108,17 @@ struct SearchBooksView: View {
             }
         }
     }
-    
+
     private func performSearch() async {
-        guard !searchText.isEmpty else {
-            results = []
-            return
-        }
-        
+        guard !searchText.isEmpty else { results = []; return }
         isSearching = true
         searchError = nil
-        
         do {
             results = try await searchService.search(query: searchText)
-            searchError = nil
         } catch {
             searchError = error
             results = []
         }
-        
         isSearching = false
     }
 }
@@ -149,70 +127,57 @@ struct SearchBooksView: View {
 
 struct BookSearchResultRow: View {
     let result: BookSearchResult
-    
+
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
-            // Thumbnail with better error handling
             Group {
-                if let thumbnailURLString = result.thumbnailURL,
-                   let url = URL(string: thumbnailURLString) {
+                if let urlString = result.thumbnailURL, let url = URL(string: urlString) {
                     AsyncImage(url: url) { phase in
                         switch phase {
-                        case .empty:
-                            ProgressView()
-                                .frame(width: 50, height: 75)
                         case .success(let image):
-                            image
-                                .resizable()
-                                .aspectRatio(contentMode: .fill)
-                        case .failure(_):
-                            placeholderImage
-                        @unknown default:
+                            image.resizable().aspectRatio(contentMode: .fill)
+                        default:
                             placeholderImage
                         }
                     }
                     .frame(width: 50, height: 75)
                     .clipped()
-                    .cornerRadius(4)
+                    .cornerRadius(Theme.CornerRadius.xs)
                 } else {
                     placeholderImage
                 }
             }
-            
-            // Book info
+
             VStack(alignment: .leading, spacing: 4) {
                 Text(result.title)
                     .font(.headline)
                     .lineLimit(2)
-                
                 Text(result.author)
                     .font(.subheadline)
                     .foregroundColor(.secondary)
                     .lineLimit(1)
-                
                 HStack(spacing: 8) {
                     if let pages = result.pageCount {
                         Label("\(pages) pages", systemImage: "book.pages")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
-                    
                     Text(result.detectedLanguage.displayName)
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
             }
-            
+
             Spacer()
         }
         .padding(.vertical, 4)
     }
-    
+
     private var placeholderImage: some View {
         Rectangle()
             .fill(Color.gray.opacity(0.2))
             .frame(width: 50, height: 75)
-            .cornerRadius(4)
+            .cornerRadius(Theme.CornerRadius.xs)
             .overlay {
                 Image(systemName: "book.closed")
                     .foregroundColor(.gray)
@@ -220,16 +185,18 @@ struct BookSearchResultRow: View {
             }
     }
 }
+
 // MARK: - Confirm Book View
 
 struct ConfirmBookView: View {
-    
+
     @Environment(\.dismiss) var dismiss
     let searchResult: BookSearchResult
     @ObservedObject var bookManager: BookManager
     let onConfirm: () -> Void
-    
+
     @State private var totalChapters: Int
+    @State private var chaptersText: String
     @State private var selectedLanguage: Language
 
     // Series detection state
@@ -238,8 +205,8 @@ struct ConfirmBookView: View {
     @State private var seriesConfirmed: Bool = false
     @State private var seriesName: String = ""
     @State private var seriesPosition: Int = 1
-    @State private var isScanning: Bool = false      // true while AI sniper call is in flight
-    
+    @State private var isScanning: Bool = false
+
     init(
         searchResult: BookSearchResult,
         bookManager: BookManager,
@@ -248,84 +215,98 @@ struct ConfirmBookView: View {
         self.searchResult = searchResult
         self.bookManager = bookManager
         self.onConfirm = onConfirm
-        
-        // Initialize state
-        _totalChapters = State(initialValue: searchResult.estimatedChapters)
+
+        let estimated = searchResult.estimatedChapters
+        _totalChapters   = State(initialValue: estimated)
+        _chaptersText    = State(initialValue: "\(estimated)")
         _selectedLanguage = State(initialValue: searchResult.detectedLanguage)
 
-        // Run series detection immediately
         let detected = SeriesDetector.detect(from: searchResult)
         let hint = detected == nil
             ? SeriesDetector.authorHint(for: searchResult, in: bookManager.books)
             : nil
 
-        _detectedSeries = State(initialValue: detected)
-        _authorHint = State(initialValue: hint)
+        _detectedSeries  = State(initialValue: detected)
+        _authorHint      = State(initialValue: hint)
 
-        // Pre-confirm only if we have a strong metadata signal (name + position both present)
         let hasStrongSignal = detected != nil && !(detected?.seriesName.isEmpty ?? true)
         _seriesConfirmed = State(initialValue: hasStrongSignal)
-        _seriesName = State(initialValue: detected?.seriesName ?? "")
-        _seriesPosition = State(initialValue: detected?.position ?? (hint?.suggestedPosition ?? 1))
+        _seriesName      = State(initialValue: detected?.seriesName ?? "")
+        _seriesPosition  = State(initialValue: detected?.position ?? (hint?.suggestedPosition ?? 1))
 
-        // AI sniper call needed when: no metadata, no regex match
-        // isScanning=true immediately so UI shows spinner on appear
-        let needsAIScan = detected == nil
-        _isScanning = State(initialValue: needsAIScan)
+        _isScanning = State(initialValue: detected == nil)
     }
-    
+
     var body: some View {
         NavigationStack {
             Form {
-                // Book preview with thumbnail
+                // Book preview
                 Section {
                     HStack(spacing: 12) {
-                        if let thumbnailURLString = searchResult.thumbnailURL,
-                           let url = URL(string: thumbnailURLString) {
+                        if let urlString = searchResult.thumbnailURL,
+                           let url = URL(string: urlString) {
                             AsyncImage(url: url) { phase in
                                 switch phase {
                                 case .success(let image):
-                                    image
-                                        .resizable()
-                                        .aspectRatio(contentMode: .fit)
-                                case .failure(_), .empty:
-                                    placeholderImage
-                                @unknown default:
+                                    image.resizable().aspectRatio(contentMode: .fit)
+                                default:
                                     placeholderImage
                                 }
                             }
                             .frame(width: 80, height: 120)
-                            .cornerRadius(6)
+                            .cornerRadius(Theme.CornerRadius.sm)
                         } else {
-                            placeholderImage
-                                .frame(width: 80, height: 120)
+                            placeholderImage.frame(width: 80, height: 120)
                         }
-                        
+
                         VStack(alignment: .leading, spacing: 6) {
-                            Text(searchResult.title)
-                                .font(.headline)
-                            Text(searchResult.author)
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
+                            Text(searchResult.title).font(.headline)
+                            Text(searchResult.author).font(.subheadline).foregroundColor(.secondary)
                         }
                     }
                     .padding(.vertical, 8)
                 }
-                
+
                 Section {
                     Picker("Language", selection: $selectedLanguage) {
-                        ForEach(Language.allCases) { language in
-                            Text(language.displayName).tag(language)
-                        }
+                        ForEach(Language.allCases) { Text($0.displayName).tag($0) }
                     }
-                    
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Total Chapters")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                        
-                        Stepper("\(totalChapters) chapters", value: $totalChapters, in: 1...500)
-                            .font(.headline)
+
+                    // Updated: TextField for direct entry + stepper for ±1 fine-tuning.
+                    // Matches AddBookView — consistent pattern throughout the app.
+                    VStack(alignment: .leading, spacing: 10) {
+                        HStack {
+                            Text("Total Chapters")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+
+                            Spacer()
+
+                            TextField("e.g. 38", text: $chaptersText)
+                                .keyboardType(.numberPad)
+                                .multilineTextAlignment(.trailing)
+                                .frame(width: 72)
+                                .onChange(of: chaptersText) { _, newValue in
+                                    let digits = newValue.filter(\.isNumber)
+                                    if let n = Int(digits), n > 0 {
+                                        totalChapters = min(n, 500)
+                                        chaptersText  = "\(totalChapters)"
+                                    } else if digits.isEmpty {
+                                        chaptersText = ""
+                                    }
+                                }
+                        }
+
+                        Stepper(
+                            "Adjust: \(totalChapters)",
+                            value: $totalChapters,
+                            in: 1...500
+                        )
+                        .onChange(of: totalChapters) { _, newValue in
+                            chaptersText = "\(newValue)"
+                        }
+                        .font(.caption)
+                        .foregroundColor(.secondary)
                     }
                     .padding(.vertical, 4)
                 } header: {
@@ -337,31 +318,23 @@ struct ConfirmBookView: View {
                         Text("Enter the total number of chapters in your copy of the book.")
                     }
                 }
-                
-                // ── Series Section ──────────────────────────────────────────
+
+                // Series section
                 Section {
                     Toggle(isOn: $seriesConfirmed) {
                         VStack(alignment: .leading, spacing: 2) {
                             HStack(spacing: 6) {
-                                Text("Part of a Series")
-                                    .font(.subheadline)
-                                if isScanning {
-                                    ProgressView()
-                                        .scaleEffect(0.7)
-                                }
+                                Text("Part of a Series").font(.subheadline)
+                                if isScanning { ProgressView().scaleEffect(0.7) }
                             }
                             if isScanning {
-                                Text("Scanning...")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
+                                Text("Scanning…").font(.caption).foregroundColor(.secondary)
                             } else if detectedSeries != nil, seriesConfirmed {
-                                Text("Detected automatically")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
+                                Text("Detected automatically").font(.caption).foregroundColor(.secondary)
                             }
                         }
                     }
-                    .disabled(isScanning) // prevent toggling while scan is in flight
+                    .disabled(isScanning)
                     .onChange(of: seriesConfirmed) { _, confirmed in
                         if confirmed && seriesName.isEmpty {
                             seriesName = detectedSeries?.seriesName ?? ""
@@ -370,17 +343,14 @@ struct ConfirmBookView: View {
                     }
 
                     if seriesConfirmed {
-                        TextField("Series Name", text: $seriesName)
-                            .textFieldStyle(.plain)
-
+                        TextField("Series Name", text: $seriesName).textFieldStyle(.plain)
                         Stepper("Book \(seriesPosition) in series", value: $seriesPosition, in: 1...50)
                     }
                 } header: {
                     Text("Series")
                 } footer: {
                     if isScanning {
-                        Text("Checking series information...")
-                            .foregroundColor(.secondary)
+                        Text("Checking series information…").foregroundColor(.secondary)
                     } else if seriesConfirmed {
                         Text("BookCompanion will use your series history for richer, context-aware summaries.")
                     } else if detectedSeries != nil {
@@ -396,8 +366,7 @@ struct ConfirmBookView: View {
                     } label: {
                         HStack {
                             Spacer()
-                            Text("Add to Library")
-                                .fontWeight(.semibold)
+                            Text("Add to Library").fontWeight(.semibold)
                             Spacer()
                         }
                     }
@@ -405,49 +374,41 @@ struct ConfirmBookView: View {
             }
             .navigationTitle("Confirm Book")
             .navigationBarTitleDisplayMode(.inline)
-            // task(id: searchResult.id) ensures the task re-runs for every
-            // unique book — even if SwiftUI reuses the view between sheet presentations.
             .task(id: searchResult.id) {
                 guard isScanning else { return }
-
                 let result = await SeriesManager.shared.detectSeries(
                     title: searchResult.title,
                     author: searchResult.author
                 )
-
                 isScanning = false
-
-                if let result = result {
+                if let result {
                     detectedSeries = result
                     seriesName = result.seriesName
                     seriesPosition = result.position
                     seriesConfirmed = true
                 }
-                // nil = standalone or timed out — leave toggle OFF silently
             }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Back") {
-                        dismiss()
-                    }
+                    Button("Back") { dismiss() }
                 }
             }
         }
         .presentationDetents([.medium, .large])
         .presentationDragIndicator(.visible)
     }
-    
+
     private var placeholderImage: some View {
         Rectangle()
             .fill(Color.gray.opacity(0.2))
-            .cornerRadius(6)
+            .cornerRadius(Theme.CornerRadius.sm)
             .overlay {
                 Image(systemName: "book.closed")
                     .foregroundColor(.gray)
                     .font(.largeTitle)
             }
     }
-    
+
     private func addBook() {
         bookManager.addBook(
             title: searchResult.title,
@@ -456,7 +417,6 @@ struct ConfirmBookView: View {
             totalChapters: totalChapters,
             coverImageURL: searchResult.thumbnailURL
         )
-        
         dismiss()
         onConfirm()
     }

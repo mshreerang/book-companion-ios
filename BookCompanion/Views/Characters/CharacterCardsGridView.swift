@@ -9,17 +9,13 @@ struct CharacterCardsGridView: View {
     @StateObject private var viewModel: CharacterCardsViewModel
     @Environment(\.dismiss) private var dismiss
 
-    // The namespace shared between grid cards and the expanded overlay —
-    // this is what drives the zoom animation
     @Namespace private var cardNamespace
-
-    // Which card is currently expanded (nil = none)
     @State private var expandedName: String? = nil
     @State private var showPaywall = false
 
     private let columns = [
-        GridItem(.flexible(), spacing: 16),
-        GridItem(.flexible(), spacing: 16)
+        GridItem(.flexible(), spacing: 12),
+        GridItem(.flexible(), spacing: 12)
     ]
 
     init(book: Book, chapter: Int, language: String = "English", allBooks: [Book] = []) {
@@ -36,41 +32,41 @@ struct CharacterCardsGridView: View {
     }
 
     var body: some View {
-        NavigationView {
-            ZStack {
-                Color(.systemGroupedBackground)
-                    .ignoresSafeArea()
+        // NavigationView removed — this view is reached via NavigationLink push
+        // from ProgressInputView which lives inside the root NavigationStack.
+        // The inner NavigationView caused a double nav bar (back chevron overlap).
+        ZStack {
+            Color(.systemGroupedBackground)
+                .ignoresSafeArea()
 
-                if viewModel.isLoadingNames {
-                    loadingView
-                } else if let error = viewModel.error {
-                    errorView(error)
-                } else if viewModel.names.isEmpty {
-                    emptyView
-                } else {
-                    cardsGrid
-                }
+            if viewModel.isLoadingNames {
+                loadingView
+            } else if let error = viewModel.error {
+                errorView(error)
+            } else if viewModel.names.isEmpty {
+                emptyView
+            } else {
+                cardsGrid
+            }
 
-                // ── Expanded card overlay ─────────────────────────────────
-                // Sits above everything. The matched geometry animates the
-                // selected card from its grid position to fill this overlay.
-                if let name = expandedName {
-                    expandedOverlay(name: name)
-                }
+            if let name = expandedName {
+                expandedOverlay(name: name)
             }
-            .navigationTitle("Characters")
-            .navigationBarTitleDisplayMode(.large)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") { dismiss() }
-                        .opacity(expandedName == nil ? 1 : 0) // hide when card is open
-                }
+        }
+        .navigationTitle("Characters")
+        .navigationBarTitleDisplayMode(.large)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                // Done button kept — provides an explicit dismiss target
+                // in addition to the system back chevron.
+                Button("Done") { dismiss() }
+                    .opacity(expandedName == nil ? 1 : 0)
             }
-            .task { await viewModel.loadNames() }
-            .sheet(isPresented: $showPaywall) {
-                PaywallView(triggerReason: "Upgrade to Pro for unlimited character analyses.")
-                    .environmentObject(StoreManager.shared)
-            }
+        }
+        .task { await viewModel.loadNames() }
+        .sheet(isPresented: $showPaywall) {
+            PaywallView(triggerReason: "Upgrade to Pro for unlimited character analyses.")
+                .environmentObject(StoreManager.shared)
         }
     }
 
@@ -80,34 +76,31 @@ struct CharacterCardsGridView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
 
+                // Spoiler-safe badge — uses brand teal tint instead of
+                // hardcoded green to stay consistent with SummaryView badge
                 Text("Safe up to Chapter \(chapter)")
                     .font(.caption.bold())
                     .padding(.horizontal, 10)
                     .padding(.vertical, 5)
-                    .background(Color.green.opacity(0.15))
-                    .foregroundColor(.green)
-                    .cornerRadius(8)
+                    .background(Theme.Colors.secondary.opacity(0.12))
+                    .foregroundColor(Theme.Colors.secondary)
+                    .cornerRadius(Theme.CornerRadius.sm)
                     .padding(.horizontal)
 
-                LazyVGrid(columns: columns, spacing: 16) {
+                LazyVGrid(columns: columns, spacing: 12) {
                     ForEach(viewModel.names, id: \.self) { name in
-                        // Grid thumbnail — tapping expands it
                         CharacterCardFront(name: name)
                             .matchedGeometryEffect(id: name, in: cardNamespace)
                             .frame(height: 200)
-                            // Hide the grid card while it's expanded so
-                            // there's no visual ghost left behind
+                            .padding(.bottom, 4) // ensures shadow has room and rows don't collapse
                             .opacity(expandedName == name ? 0 : 1)
-                            .onTapGesture {
-                                selectCard(name: name)
-                            }
+                            .onTapGesture { selectCard(name: name) }
                     }
                 }
                 .padding(.horizontal)
             }
             .padding(.vertical)
         }
-        // Disable scroll while a card is expanded
         .scrollDisabled(expandedName != nil)
     }
 
@@ -115,12 +108,10 @@ struct CharacterCardsGridView: View {
 
     private func expandedOverlay(name: String) -> some View {
         ZStack {
-            // Dimmed background — tap to dismiss
             Color.black.opacity(0.4)
                 .ignoresSafeArea()
                 .onTapGesture { dismissCard() }
 
-            // The expanded card — takes most of the screen
             CharacterCardView(
                 name: name,
                 book: book,
@@ -139,8 +130,7 @@ struct CharacterCardsGridView: View {
     // MARK: - Expand / Dismiss
 
     private func selectCard(name: String) {
-        let impact = UIImpactFeedbackGenerator(style: .medium)
-        impact.impactOccurred()
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
         withAnimation(.spring(response: 0.45, dampingFraction: 0.78)) {
             expandedName = name
         }
@@ -152,18 +142,18 @@ struct CharacterCardsGridView: View {
         }
     }
 
-    // MARK: - Loading View
+    // MARK: - Loading
 
     private var loadingView: some View {
         VStack(spacing: 16) {
             ProgressView().scaleEffect(1.5)
-            Text("Loading characters...")
+            Text("Loading characters…")
                 .font(.headline)
                 .foregroundColor(.secondary)
         }
     }
 
-    // MARK: - Error View
+    // MARK: - Error
 
     private func errorView(_ message: String) -> some View {
         VStack(spacing: 16) {
@@ -183,21 +173,21 @@ struct CharacterCardsGridView: View {
                 .padding(.horizontal)
 
             if message.contains("Upgrade") || message.contains("limit") {
-                Button("Upgrade to Pro") {
-                    showPaywall = true
-                }
-                .buttonStyle(.borderedProminent)
+                Button("Upgrade to Pro") { showPaywall = true }
+                    .buttonStyle(.borderedProminent)
+                    .tint(Theme.Colors.primary)
             } else {
                 Button("Try Again") {
                     Task { await viewModel.loadNames() }
                 }
                 .buttonStyle(.borderedProminent)
+                .tint(Theme.Colors.primary)
             }
         }
         .padding()
     }
 
-    // MARK: - Empty View
+    // MARK: - Empty
 
     private var emptyView: some View {
         VStack(spacing: 16) {
