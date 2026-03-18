@@ -196,6 +196,7 @@ class SummaryViewModel: ObservableObject {
             "chapter": chapter,
             "language": language.displayName,
             "length": length.rawValue,
+            "bookType": book.bookType.rawValue,
             "stream": true
         ]
 

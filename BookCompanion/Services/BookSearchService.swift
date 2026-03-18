@@ -20,6 +20,7 @@ struct BookSearchResult: Identifiable, Equatable {
     let section: String       // "bestMatch" or "otherResults"
     let seriesName: String?   // from Google Books metadata or title pattern
     let seriesPosition: Int?  // position in series (1, 2, 3...)
+    let bookType: BookType    // drives prompt branching — detected at search time
     
     var author: String {
         // Deduplicate authors — some API results return the same name twice
@@ -124,7 +125,8 @@ final class BookSearchService {
                 categories: book.categories.isEmpty ? nil : book.categories,
                 section: book.section ?? "otherResults",
                 seriesName: book.seriesName,
-                seriesPosition: book.seriesPosition
+                seriesPosition: book.seriesPosition,
+                bookType: BookType(rawValue: book.bookType ?? "fiction") ?? .fiction
             )
         }
         
@@ -151,6 +153,7 @@ private struct BackendBook: Codable {
     let section: String?
     let seriesName: String?
     let seriesPosition: Int?
+    let bookType: String?
 }
 
 // MARK: - Errors

@@ -105,14 +105,19 @@ struct CharacterCardBack: View {
     // in the character feature.
 
     private func chatButton(_ character: CharacterCard) -> some View {
-        VStack(spacing: 0) {
+        // For practical books, chat is always with the author about the topic
+        let chatLabel = book.bookType == .practical
+            ? "Chat with \(book.author.components(separatedBy: ",").first ?? book.author)"
+            : "Chat with \(character.fullName)"
+
+        return VStack(spacing: 0) {
             Divider()
             Button {
                 showChat = true
             } label: {
                 HStack(spacing: 8) {
                     Image(systemName: "bubble.left.and.bubble.right.fill")
-                    Text("Chat with \(character.fullName)")
+                    Text(chatLabel)
                         .fontWeight(.semibold)
                 }
                 .font(.subheadline)

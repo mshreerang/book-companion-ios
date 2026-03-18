@@ -207,6 +207,7 @@ final class CharacterChatViewModel: ObservableObject {
             "characterName":  character.fullName,
             "characterRole":  character.role ?? "Character",
             "userMessage":    userMessage,
+            "bookType":       book.bookType.rawValue,
             // Send conversation history so the LLM has context.
             // Filter to user/character only — system messages are never sent.
             "history":        apiHistory(),

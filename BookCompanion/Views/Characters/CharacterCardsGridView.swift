@@ -90,9 +90,9 @@ struct CharacterCardsGridView: View {
                 LazyVGrid(columns: columns, spacing: 12) {
                     ForEach(viewModel.names, id: \.self) { name in
                         CharacterCardFront(name: name)
-                            .matchedGeometryEffect(id: name, in: cardNamespace)
+                            .matchedGeometryEffect(id: name, in: cardNamespace, isSource: expandedName != name)
                             .frame(height: 200)
-                            .padding(.bottom, 4) // ensures shadow has room and rows don't collapse
+                            .padding(.bottom, 4)
                             .opacity(expandedName == name ? 0 : 1)
                             .onTapGesture { selectCard(name: name) }
                     }
@@ -120,7 +120,7 @@ struct CharacterCardsGridView: View {
                 cardNamespace: cardNamespace,
                 onDismiss: { dismissCard() }
             )
-            .matchedGeometryEffect(id: name, in: cardNamespace)
+            .matchedGeometryEffect(id: name, in: cardNamespace, isSource: true)
             .padding(.horizontal, 20)
             .padding(.vertical, 60)
         }

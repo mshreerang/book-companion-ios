@@ -53,13 +53,8 @@ class BookSyncService: ObservableObject {
                 bookDict["pageCount"] = pages
             }
 
-            if let seriesId = book.seriesId {
-                bookDict["seriesId"] = seriesId.uuidString
-            }
-
-            if let seriesPosition = book.seriesPosition {
-                bookDict["seriesPosition"] = seriesPosition
-            }
+            // Book type — drives prompt branching on backend
+            bookDict["bookType"] = book.bookType.rawValue
 
             return bookDict
         }
@@ -140,10 +135,8 @@ class BookSyncService: ObservableObject {
             let currentChapter = bookDict["current_chapter"] as? Int ?? 1
             let coverImageURL = bookDict["cover_image_url"] as? String
             let pageCount = bookDict["page_count"] as? Int
-            let seriesIdString = bookDict["series_id"] as? String
-            let seriesId = seriesIdString.flatMap { UUID(uuidString: $0) }
-            let seriesPosition = bookDict["series_position"] as? Int
-            let seriesName = bookDict["series_name"] as? String
+            let bookTypeRaw = bookDict["book_type"] as? String ?? "fiction"
+            let bookType = BookType(rawValue: bookTypeRaw) ?? .fiction
             
             // Parse created_at
             var createdAt = Date()
@@ -161,9 +154,7 @@ class BookSyncService: ObservableObject {
                 pageCount: pageCount,
                 coverImageURL: coverImageURL,
                 createdAt: createdAt,
-                seriesId: seriesId,
-                seriesPosition: seriesPosition,
-                seriesName: seriesName,
+                bookType: bookType,
                 readingProgress: ReadingProgress(
                     id: UUID(),
                     bookId: id,

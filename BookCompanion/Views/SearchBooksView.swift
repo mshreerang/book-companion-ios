@@ -415,7 +415,11 @@ struct ConfirmBookView: View {
             author: searchResult.author,
             language: selectedLanguage,
             totalChapters: totalChapters,
-            coverImageURL: searchResult.thumbnailURL
+            pageCount: searchResult.pageCount,
+            coverImageURL: searchResult.thumbnailURL,
+            bookType: searchResult.bookType,
+            seriesName: seriesConfirmed && !seriesName.isEmpty ? seriesName : nil,
+            seriesPosition: seriesConfirmed ? seriesPosition : nil
         )
         dismiss()
         onConfirm()

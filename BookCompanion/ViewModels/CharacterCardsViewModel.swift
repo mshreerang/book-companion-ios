@@ -133,7 +133,8 @@ class CharacterCardsViewModel: ObservableObject {
             "bookTitle": book.title,
             "author": book.author,
             "chapter": chapter,
-            "language": language
+            "language": language,
+            "bookType": book.bookType.rawValue
         ]
         if let ctx = buildSeriesContextDict() { body["seriesContext"] = ctx }
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
@@ -176,7 +177,8 @@ class CharacterCardsViewModel: ObservableObject {
             "author": book.author,
             "chapter": chapter,
             "characterName": name,
-            "language": language
+            "language": language,
+            "bookType": book.bookType.rawValue
         ]
         if let ctx = buildSeriesContextDict() { body["seriesContext"] = ctx }
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
@@ -229,7 +231,8 @@ class CharacterCardsViewModel: ObservableObject {
             "author": book.author,
             "chapter": chapter,
             "characterNames": names,
-            "language": language
+            "language": language,
+            "bookType": book.bookType.rawValue
         ]
         if let ctx = buildSeriesContextDict() { body["seriesContext"] = ctx }
         request.httpBody = try JSONSerialization.data(withJSONObject: body)

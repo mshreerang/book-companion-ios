@@ -136,6 +136,7 @@ final class BookManager: ObservableObject {
         totalChapters: Int,
         pageCount: Int? = nil,
         coverImageURL: String? = nil,
+        bookType: BookType = .fiction,
         seriesName: String? = nil,
         seriesPosition: Int? = nil
     ) {
@@ -150,6 +151,7 @@ final class BookManager: ObservableObject {
             pageCount: pageCount,
             coverImageURL: coverImageURL,
             createdAt: Date(),
+            bookType: bookType,
             seriesName: seriesName
         )
 
