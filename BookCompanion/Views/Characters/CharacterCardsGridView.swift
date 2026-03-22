@@ -14,8 +14,8 @@ struct CharacterCardsGridView: View {
     @State private var showPaywall = false
 
     private let columns = [
-        GridItem(.flexible(), spacing: 0),
-        GridItem(.flexible(), spacing: 0)
+        GridItem(.flexible(), spacing: 12),
+        GridItem(.flexible(), spacing: 12)
     ]
 
     init(book: Book, chapter: Int, language: String = "English", allBooks: [Book] = []) {
@@ -61,18 +61,16 @@ struct CharacterCardsGridView: View {
             }
         }
         .task { await viewModel.loadNames() }
-        // When isPro flips to true (after purchase or webhook sync),
-        // clear the quota error and reload characters automatically.
         .onChange(of: store.isPro) { _, isPro in
             if isPro && (viewModel.error != nil || viewModel.limitedMessage != nil) {
-                viewModel.error = nil
-                viewModel.limitedMessage = nil
-                Task { await viewModel.loadNames() }
+                performReload()
             }
         }
-        .sheet(isPresented: $showPaywall) {
+        .sheet(isPresented: $showPaywall, onDismiss: {
+            if store.isPro { performReload() }
+        }) {
             PaywallView(triggerReason: "Upgrade to Pro for unlimited character analyses.")
-                .environmentObject(StoreManager.shared)
+                .environmentObject(store)
         }
     }
 
@@ -91,17 +89,17 @@ struct CharacterCardsGridView: View {
                     .cornerRadius(Theme.CornerRadius.sm)
                     .padding(.horizontal)
 
-                LazyVGrid(columns: columns, spacing: 0) {
+                LazyVGrid(columns: columns, spacing: 12) {
                     ForEach(viewModel.names, id: \.self) { name in
                         CharacterCardFront(name: name)
-                            .frame(height: 200)
-                            .padding(8)
+                            .frame(height: 160)
+                            .contentShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.xl))
                             .opacity(expandedName == name ? 0 : 1)
                             .scaleEffect(expandedName == name ? 0.95 : 1)
                             .onTapGesture { selectCard(name: name) }
                     }
                 }
-                .padding(.horizontal, 8)
+                .padding(.horizontal)
             }
             .padding(.vertical)
         }
@@ -132,6 +130,17 @@ struct CharacterCardsGridView: View {
     }
 
     // MARK: - Expand / Dismiss
+
+    /// Centralised reload with a short delay to allow the backend to process
+    /// the subscription receipt before we re-check quota.
+    private func performReload() {
+        Task {
+            try? await Task.sleep(nanoseconds: 500_000_000) // 0.5s
+            viewModel.error = nil
+            viewModel.limitedMessage = nil
+            await viewModel.loadNames()
+        }
+    }
 
     private func selectCard(name: String) {
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
@@ -176,16 +185,14 @@ struct CharacterCardsGridView: View {
                 .multilineTextAlignment(.center)
                 .padding(.horizontal)
 
-            if message.contains("Upgrade") || message.contains("limit") {
+            if (message.contains("Upgrade") || message.contains("limit")) && !store.isPro {
                 Button("Upgrade to Pro") { showPaywall = true }
                     .buttonStyle(.borderedProminent)
                     .tint(Theme.Colors.primary)
             } else {
-                Button("Try Again") {
-                    Task { await viewModel.loadNames() }
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(Theme.Colors.primary)
+                Button("Try Again") { performReload() }
+                    .buttonStyle(.borderedProminent)
+                    .tint(Theme.Colors.primary)
             }
         }
         .padding()

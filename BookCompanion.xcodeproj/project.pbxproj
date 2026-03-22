@@ -8,11 +8,11 @@
 
 /* Begin PBXBuildFile section */
 		F40CF3982F544E4D00DFAD3A /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F40CF3972F544E4D00DFAD3A /* StoreKit.framework */; };
-		F499DF642F6F99C3004540B9 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = F499DF632F6F99C3004540B9 /* Supabase */; };
-		F499DF672F6F99D4004540B9 /* PostHog in Frameworks */ = {isa = PBXBuildFile; productRef = F499DF662F6F99D4004540B9 /* PostHog */; };
-		F499DF6A2F6F9A0A004540B9 /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = F499DF692F6F9A0A004540B9 /* Sentry */; };
-		F499DF6D2F6F9A25004540B9 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = F499DF6C2F6F9A25004540B9 /* RevenueCat */; };
-		F499DF6F2F6F9A25004540B9 /* RevenueCatUI in Frameworks */ = {isa = PBXBuildFile; productRef = F499DF6E2F6F9A25004540B9 /* RevenueCatUI */; };
+		F47449222F709D5600A5F3D1 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = F47449212F709D5600A5F3D1 /* RevenueCat */; };
+		F47449242F709D5600A5F3D1 /* RevenueCatUI in Frameworks */ = {isa = PBXBuildFile; productRef = F47449232F709D5600A5F3D1 /* RevenueCatUI */; };
+		F47449272F709D6700A5F3D1 /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = F47449262F709D6700A5F3D1 /* Sentry */; };
+		F474492A2F709D7B00A5F3D1 /* PostHog in Frameworks */ = {isa = PBXBuildFile; productRef = F47449292F709D7B00A5F3D1 /* PostHog */; };
+		F474492D2F709D8C00A5F3D1 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = F474492C2F709D8C00A5F3D1 /* Supabase */; };
 		F4BB54902F4E663600391D3F /* (null) in Frameworks */ = {isa = PBXBuildFile; };
 		F4BB54912F4E663600391D3F /* (null) in Frameworks */ = {isa = PBXBuildFile; };
 /* End PBXBuildFile section */
@@ -77,12 +77,12 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				F499DF672F6F99D4004540B9 /* PostHog in Frameworks */,
-				F499DF642F6F99C3004540B9 /* Supabase in Frameworks */,
-				F499DF6F2F6F9A25004540B9 /* RevenueCatUI in Frameworks */,
-				F499DF6D2F6F9A25004540B9 /* RevenueCat in Frameworks */,
+				F47449222F709D5600A5F3D1 /* RevenueCat in Frameworks */,
 				F40CF3982F544E4D00DFAD3A /* StoreKit.framework in Frameworks */,
-				F499DF6A2F6F9A0A004540B9 /* Sentry in Frameworks */,
+				F474492D2F709D8C00A5F3D1 /* Supabase in Frameworks */,
+				F474492A2F709D7B00A5F3D1 /* PostHog in Frameworks */,
+				F47449242F709D5600A5F3D1 /* RevenueCatUI in Frameworks */,
+				F47449272F709D6700A5F3D1 /* Sentry in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -155,11 +155,11 @@
 			);
 			name = BookCompanion;
 			packageProductDependencies = (
-				F499DF632F6F99C3004540B9 /* Supabase */,
-				F499DF662F6F99D4004540B9 /* PostHog */,
-				F499DF692F6F9A0A004540B9 /* Sentry */,
-				F499DF6C2F6F9A25004540B9 /* RevenueCat */,
-				F499DF6E2F6F9A25004540B9 /* RevenueCatUI */,
+				F47449212F709D5600A5F3D1 /* RevenueCat */,
+				F47449232F709D5600A5F3D1 /* RevenueCatUI */,
+				F47449262F709D6700A5F3D1 /* Sentry */,
+				F47449292F709D7B00A5F3D1 /* PostHog */,
+				F474492C2F709D8C00A5F3D1 /* Supabase */,
 			);
 			productName = BookCompanion;
 			productReference = F49C0F9A2F1D94BE00B17BBE /* BookCompanion.app */;
@@ -245,10 +245,10 @@
 			mainGroup = F49C0F912F1D94BE00B17BBE;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				F499DF622F6F99C3004540B9 /* XCRemoteSwiftPackageReference "supabase-swift" */,
-				F499DF652F6F99D4004540B9 /* XCRemoteSwiftPackageReference "posthog-ios" */,
-				F499DF682F6F9A0A004540B9 /* XCRemoteSwiftPackageReference "sentry-cocoa" */,
-				F499DF6B2F6F9A25004540B9 /* XCRemoteSwiftPackageReference "purchases-ios" */,
+				F47449202F709D5600A5F3D1 /* XCRemoteSwiftPackageReference "purchases-ios" */,
+				F47449252F709D6700A5F3D1 /* XCRemoteSwiftPackageReference "sentry-cocoa" */,
+				F47449282F709D7B00A5F3D1 /* XCRemoteSwiftPackageReference "posthog-ios" */,
+				F474492B2F709D8C00A5F3D1 /* XCRemoteSwiftPackageReference "supabase-swift" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = F49C0F9B2F1D94BE00B17BBE /* Products */;
@@ -712,31 +712,7 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		F499DF622F6F99C3004540B9 /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/supabase/supabase-swift";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 2.5.1;
-			};
-		};
-		F499DF652F6F99D4004540B9 /* XCRemoteSwiftPackageReference "posthog-ios" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/PostHog/posthog-ios";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 3.48.0;
-			};
-		};
-		F499DF682F6F9A0A004540B9 /* XCRemoteSwiftPackageReference "sentry-cocoa" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/getsentry/sentry-cocoa";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 9.8.0;
-			};
-		};
-		F499DF6B2F6F9A25004540B9 /* XCRemoteSwiftPackageReference "purchases-ios" */ = {
+		F47449202F709D5600A5F3D1 /* XCRemoteSwiftPackageReference "purchases-ios" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/RevenueCat/purchases-ios";
 			requirement = {
@@ -744,33 +720,57 @@
 				minimumVersion = 5.66.0;
 			};
 		};
+		F47449252F709D6700A5F3D1 /* XCRemoteSwiftPackageReference "sentry-cocoa" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/getsentry/sentry-cocoa";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 9.8.0;
+			};
+		};
+		F47449282F709D7B00A5F3D1 /* XCRemoteSwiftPackageReference "posthog-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/PostHog/posthog-ios";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 3.48.0;
+			};
+		};
+		F474492B2F709D8C00A5F3D1 /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/supabase/supabase-swift";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.5.1;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		F499DF632F6F99C3004540B9 /* Supabase */ = {
+		F47449212F709D5600A5F3D1 /* RevenueCat */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = F499DF622F6F99C3004540B9 /* XCRemoteSwiftPackageReference "supabase-swift" */;
-			productName = Supabase;
-		};
-		F499DF662F6F99D4004540B9 /* PostHog */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = F499DF652F6F99D4004540B9 /* XCRemoteSwiftPackageReference "posthog-ios" */;
-			productName = PostHog;
-		};
-		F499DF692F6F9A0A004540B9 /* Sentry */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = F499DF682F6F9A0A004540B9 /* XCRemoteSwiftPackageReference "sentry-cocoa" */;
-			productName = Sentry;
-		};
-		F499DF6C2F6F9A25004540B9 /* RevenueCat */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = F499DF6B2F6F9A25004540B9 /* XCRemoteSwiftPackageReference "purchases-ios" */;
+			package = F47449202F709D5600A5F3D1 /* XCRemoteSwiftPackageReference "purchases-ios" */;
 			productName = RevenueCat;
 		};
-		F499DF6E2F6F9A25004540B9 /* RevenueCatUI */ = {
+		F47449232F709D5600A5F3D1 /* RevenueCatUI */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = F499DF6B2F6F9A25004540B9 /* XCRemoteSwiftPackageReference "purchases-ios" */;
+			package = F47449202F709D5600A5F3D1 /* XCRemoteSwiftPackageReference "purchases-ios" */;
 			productName = RevenueCatUI;
+		};
+		F47449262F709D6700A5F3D1 /* Sentry */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F47449252F709D6700A5F3D1 /* XCRemoteSwiftPackageReference "sentry-cocoa" */;
+			productName = Sentry;
+		};
+		F47449292F709D7B00A5F3D1 /* PostHog */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F47449282F709D7B00A5F3D1 /* XCRemoteSwiftPackageReference "posthog-ios" */;
+			productName = PostHog;
+		};
+		F474492C2F709D8C00A5F3D1 /* Supabase */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F474492B2F709D8C00A5F3D1 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Supabase;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
