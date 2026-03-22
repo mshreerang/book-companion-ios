@@ -23,6 +23,15 @@ final class BookManager: ObservableObject {
     init() {
         loadBooks()
         reloadProgress()
+        // Listen for sign out — clear local data immediately
+        // so the next user on this device cannot see the previous user's library
+        NotificationCenter.default.addObserver(
+            forName: .userDidSignOut,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.clearAllLocalData()
+        }
     }
     
     // ============================================
@@ -296,6 +305,25 @@ final class BookManager: ObservableObject {
     // MARK: - Private Methods
     // ============================================
     
+    // ============================================
+    // MARK: - Sign Out
+    // ============================================
+
+    /// Clears all local book data on sign out.
+    /// Called by AuthManager.signOut() to ensure no user's books
+    /// are visible to a subsequent user on the same device.
+    func clearAllLocalData() {
+        // Clear all progress keys for current books
+        for book in books {
+            deleteProgress(for: book.id)
+        }
+        // Clear the books array from UserDefaults and memory
+        defaults.removeObject(forKey: key)
+        books = []
+        lastSyncDate = nil
+        print("✅ BookManager: local data cleared on sign out")
+    }
+
     private func loadBooks() {
         guard let data = defaults.data(forKey: key),
               let decoded = try? JSONDecoder().decode([Book].self, from: data) else {

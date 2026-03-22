@@ -10,6 +10,11 @@ import Foundation
 import AuthenticationServices
 import Combine
 
+// MARK: - Notification Names
+extension Notification.Name {
+    static let userDidSignOut = Notification.Name("userDidSignOut")
+}
+
 @MainActor
 class AuthManager: NSObject, ObservableObject {
     
@@ -199,6 +204,10 @@ class AuthManager: NSObject, ObservableObject {
         
         KeychainManager.shared.clearAll()
         ChatSessionStore.clearAll()
+        
+        // Notify all listeners (BookManager, etc.) to clear local data
+        // so the next user on this device cannot see the previous user's data
+        NotificationCenter.default.post(name: .userDidSignOut, object: nil)
         
         self.isSignedIn = false
         self.userId = nil

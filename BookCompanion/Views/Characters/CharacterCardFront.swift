@@ -38,7 +38,7 @@ struct CharacterCardFront: View {
             .padding()
         }
         .cornerRadius(Theme.CornerRadius.xl)
-        .shadow(color: Theme.Colors.brandShadow, radius: 6, x: 0, y: 3)
+        .shadow(color: Theme.Colors.brandShadow, radius: 3, x: 0, y: 2)
     }
 }
 

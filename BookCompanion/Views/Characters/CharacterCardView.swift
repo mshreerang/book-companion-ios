@@ -2,16 +2,16 @@ import SwiftUI
 
 // CharacterCardView is now the EXPANDED card only.
 // It lives in the overlay layer of CharacterCardsGridView.
-// The grid thumbnail is just CharacterCardFront + matchedGeometryEffect.
+// The grid thumbnail is just CharacterCardFront — no matchedGeometryEffect.
 
 struct CharacterCardView: View {
     let name: String
     let book: Book
     let chapter: Int
     @ObservedObject var viewModel: CharacterCardsViewModel
-    var cardNamespace: Namespace.ID
     var onDismiss: () -> Void
 
+    @EnvironmentObject private var store: StoreManager
     @State private var isFlipped = false
     @State private var character: CharacterCard?
     @State private var isLoadingDetails = false
@@ -107,6 +107,14 @@ struct CharacterCardView: View {
             PaywallView(triggerReason: "Upgrade to Pro for unlimited character analyses.")
                 .environmentObject(StoreManager.shared)
         }
+        // When Pro is granted (purchase or restore), dismiss the paywall sheet
+        // and clear the quota exceeded state so characters reload automatically
+        .onChange(of: store.isPro) { _, isPro in
+            if isPro {
+                showPaywall = false
+                isQuotaExceeded = false
+            }
+        }
         .onAppear {
             // Brief pause so the zoom animation completes before the flip starts
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
@@ -146,8 +154,6 @@ struct CharacterCardView: View {
 }
 
 #Preview {
-    @Previewable @Namespace var ns
-    // Preview shows the expanded card directly
     ZStack {
         Color.black.opacity(0.4).ignoresSafeArea()
         CharacterCardView(
@@ -173,9 +179,9 @@ struct CharacterCardView: View {
                 ),
                 chapter: 33
             ),
-            cardNamespace: ns,
             onDismiss: {}
         )
+        .environmentObject(StoreManager.shared)
         .padding(20)
     }
 }

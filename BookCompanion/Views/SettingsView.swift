@@ -160,7 +160,7 @@ struct SettingsView: View {
                     }
 
                     // Updated: custom domain email replaces personal Gmail
-                    Link(destination: URL(string: "mailto:support@bookcompanion.app")!) {
+                    Link(destination: URL(string: "mailto:support@vivanlabs.com")!) {
                         HStack {
                             Label("Support", systemImage: "questionmark.circle")
                             Spacer()

@@ -8,6 +8,9 @@ class CharacterCardsViewModel: ObservableObject {
     @Published var detailsCache: [String: CharacterCard] = [:]
     @Published var isLoadingNames = false
     @Published var error: String?
+    /// Set when the API returns success but no characters because the book
+    /// is not well-known enough for Claude to generate accurate results.
+    @Published var limitedMessage: String? = nil
     
     private let book: Book
     private let chapter: Int
@@ -40,19 +43,28 @@ class CharacterCardsViewModel: ObservableObject {
     func loadNames() async {
         isLoadingNames = true
         error = nil
-        
+        limitedMessage = nil
+
         do {
-            // Step 1: Fetch names
             let response = try await fetchCharacterNames()
+
+            // Backend filtered out all disclaimer responses — book not in training data
+            if response.limited {
+                self.limitedMessage = response.limitedMessage
+                    ?? "We don't have enough information about this book to list characters accurately."
+                isLoadingNames = false
+                return
+            }
+
             self.names = response.names
-            
+
             // Step 2: Pre-warm top 2 characters (background)
             if response.names.count >= 2 {
                 Task {
                     await prewarmTopCharacters(Array(response.names.prefix(2)))
                 }
             }
-            
+
             isLoadingNames = false
         } catch {
             self.error = error.localizedDescription
@@ -145,18 +157,26 @@ class CharacterCardsViewModel: ObservableObject {
         try checkHTTPResponse(response, data: data)
         
         // Parse response
+        // Note: tokensUsed is optional — a limited response (book not in training data)
+        // returns success:true + characters:[] + limited:true but no tokensUsed.
+        // We must not require it in the guard or limited responses will throw invalidResponse.
         let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
         guard let success = json?["success"] as? Bool, success,
-              let characters = json?["characters"] as? [String],
-              let tokensUsed = json?["tokensUsed"] as? Int else {
+              let characters = json?["characters"] as? [String] else {
             throw CharacterAPIError.invalidResponse
         }
-        
+
+        let tokensUsed = json?["tokensUsed"] as? Int ?? 0
+        let limited = json?["limited"] as? Bool ?? false
+        let limitedMessage = json?["message"] as? String
+
         return CharacterNamesResponse(
             success: success,
             names: characters,
             tokensUsed: tokensUsed,
-            cached: false
+            cached: false,
+            limited: limited,
+            limitedMessage: limitedMessage
         )
     }
     

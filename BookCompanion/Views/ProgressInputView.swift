@@ -292,6 +292,7 @@ struct ActionButtonPair: View {
                     allBooks: []
                 )
                 .onAppear { onAction() }
+                .environmentObject(StoreManager.shared)
             } label: {
                 ActionCard(
                     icon: "bubble.left.and.bubble.right.fill",

@@ -55,30 +55,36 @@ final class StoreManager: ObservableObject {
     func login(userId: String) async {
         do {
             _ = try await Purchases.shared.logIn(userId)
+            // After login, always fetch fresh entitlements from RevenueCat
             await syncEntitlement()
         } catch {
             print("❌ RC login error: \(error)")
         }
     }
 
-    // MARK: - Sync (foreground)
+    // MARK: - Sync (foreground — always fresh from network)
+    // Uses .fetchCurrent to force a network call to RevenueCat.
+    // This ensures we never show stale entitlement state after a purchase or login.
 
     func syncEntitlement() async {
         do {
-            let info = try await Purchases.shared.customerInfo(fetchPolicy: .cachedOrFetched)
+            let info = try await Purchases.shared.customerInfo(fetchPolicy: .fetchCurrent)
             updateState(from: info)
         } catch {
             print("⚠️ RC entitlement sync failed — keeping cached state: \(error)")
         }
     }
 
-    // MARK: - Sync (cold launch — cache only)
+    // MARK: - Sync (cold launch — cache first, network fallback)
+    // Used only on app launch to avoid blocking the UI with a network call.
+    // Falls back to a fresh fetch if cache is empty.
 
     func syncEntitlementCached() async {
         do {
             let info = try await Purchases.shared.customerInfo(fetchPolicy: .fromCacheOnly)
             updateState(from: info)
         } catch {
+            // Cache miss — fall back to network
             await syncEntitlement()
         }
     }
@@ -94,6 +100,11 @@ final class StoreManager: ObservableObject {
     }
 
     // MARK: - Purchase
+    // After a successful purchase:
+    //   1. updateState immediately from the purchase result (fast, local)
+    //   2. syncEntitlement fetches fresh from network (confirms with RC server)
+    // This two-step approach ensures the UI updates instantly while also
+    // confirming the entitlement with RevenueCat's server.
 
     func purchase(package: Package) async -> Bool {
         isPurchasing = true
@@ -101,7 +112,12 @@ final class StoreManager: ObservableObject {
         do {
             let (_, info, cancelled) = try await Purchases.shared.purchase(package: package)
             isPurchasing = false
-            if !cancelled { updateState(from: info) }
+            if !cancelled {
+                // Step 1 — immediate local update from purchase result
+                updateState(from: info)
+                // Step 2 — force fresh network sync to confirm with RC server
+                await syncEntitlement()
+            }
             return !cancelled
         } catch {
             isPurchasing = false
@@ -111,6 +127,7 @@ final class StoreManager: ObservableObject {
     }
 
     // MARK: - Restore
+    // Always fetches fresh after restore to confirm entitlements.
 
     @discardableResult
     func restorePurchases() async -> Bool {
@@ -119,6 +136,8 @@ final class StoreManager: ObservableObject {
         do {
             let info = try await Purchases.shared.restorePurchases()
             updateState(from: info)
+            // Confirm with a fresh network fetch
+            await syncEntitlement()
             isPurchasing = false
             return isPro
         } catch {

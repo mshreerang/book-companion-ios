@@ -7,15 +7,15 @@ struct CharacterCardsGridView: View {
     let allBooks: [Book]
 
     @StateObject private var viewModel: CharacterCardsViewModel
+    @EnvironmentObject private var store: StoreManager
     @Environment(\.dismiss) private var dismiss
 
-    @Namespace private var cardNamespace
     @State private var expandedName: String? = nil
     @State private var showPaywall = false
 
     private let columns = [
-        GridItem(.flexible(), spacing: 12),
-        GridItem(.flexible(), spacing: 12)
+        GridItem(.flexible(), spacing: 0),
+        GridItem(.flexible(), spacing: 0)
     ]
 
     init(book: Book, chapter: Int, language: String = "English", allBooks: [Book] = []) {
@@ -32,15 +32,14 @@ struct CharacterCardsGridView: View {
     }
 
     var body: some View {
-        // NavigationView removed — this view is reached via NavigationLink push
-        // from ProgressInputView which lives inside the root NavigationStack.
-        // The inner NavigationView caused a double nav bar (back chevron overlap).
         ZStack {
             Color(.systemGroupedBackground)
                 .ignoresSafeArea()
 
             if viewModel.isLoadingNames {
                 loadingView
+            } else if let limited = viewModel.limitedMessage {
+                limitedView(limited)
             } else if let error = viewModel.error {
                 errorView(error)
             } else if viewModel.names.isEmpty {
@@ -57,13 +56,20 @@ struct CharacterCardsGridView: View {
         .navigationBarTitleDisplayMode(.large)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
-                // Done button kept — provides an explicit dismiss target
-                // in addition to the system back chevron.
                 Button("Done") { dismiss() }
                     .opacity(expandedName == nil ? 1 : 0)
             }
         }
         .task { await viewModel.loadNames() }
+        // When isPro flips to true (after purchase or webhook sync),
+        // clear the quota error and reload characters automatically.
+        .onChange(of: store.isPro) { _, isPro in
+            if isPro && (viewModel.error != nil || viewModel.limitedMessage != nil) {
+                viewModel.error = nil
+                viewModel.limitedMessage = nil
+                Task { await viewModel.loadNames() }
+            }
+        }
         .sheet(isPresented: $showPaywall) {
             PaywallView(triggerReason: "Upgrade to Pro for unlimited character analyses.")
                 .environmentObject(StoreManager.shared)
@@ -76,8 +82,6 @@ struct CharacterCardsGridView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
 
-                // Spoiler-safe badge — uses brand teal tint instead of
-                // hardcoded green to stay consistent with SummaryView badge
                 Text("Safe up to Chapter \(chapter)")
                     .font(.caption.bold())
                     .padding(.horizontal, 10)
@@ -87,17 +91,17 @@ struct CharacterCardsGridView: View {
                     .cornerRadius(Theme.CornerRadius.sm)
                     .padding(.horizontal)
 
-                LazyVGrid(columns: columns, spacing: 12) {
+                LazyVGrid(columns: columns, spacing: 0) {
                     ForEach(viewModel.names, id: \.self) { name in
                         CharacterCardFront(name: name)
-                            .matchedGeometryEffect(id: name, in: cardNamespace, isSource: expandedName != name)
                             .frame(height: 200)
-                            .padding(.bottom, 4)
+                            .padding(8)
                             .opacity(expandedName == name ? 0 : 1)
+                            .scaleEffect(expandedName == name ? 0.95 : 1)
                             .onTapGesture { selectCard(name: name) }
                     }
                 }
-                .padding(.horizontal)
+                .padding(.horizontal, 8)
             }
             .padding(.vertical)
         }
@@ -111,18 +115,18 @@ struct CharacterCardsGridView: View {
             Color.black.opacity(0.4)
                 .ignoresSafeArea()
                 .onTapGesture { dismissCard() }
+                .transition(.opacity)
 
             CharacterCardView(
                 name: name,
                 book: book,
                 chapter: chapter,
                 viewModel: viewModel,
-                cardNamespace: cardNamespace,
                 onDismiss: { dismissCard() }
             )
-            .matchedGeometryEffect(id: name, in: cardNamespace, isSource: true)
             .padding(.horizontal, 20)
             .padding(.vertical, 60)
+            .transition(.scale(scale: 0.85).combined(with: .opacity))
         }
         .zIndex(10)
     }
@@ -187,6 +191,29 @@ struct CharacterCardsGridView: View {
         .padding()
     }
 
+    // MARK: - Limited Knowledge
+
+    private func limitedView(_ message: String) -> some View {
+        VStack(spacing: 16) {
+            Image(systemName: "books.vertical")
+                .font(.system(size: 50))
+                .foregroundColor(.secondary)
+            Text("Characters Unavailable")
+                .font(.headline)
+            Text(message)
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal)
+            Button("Try Again") {
+                Task { await viewModel.loadNames() }
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(Theme.Colors.primary)
+        }
+        .padding()
+    }
+
     // MARK: - Empty
 
     private var emptyView: some View {
@@ -220,4 +247,5 @@ struct CharacterCardsGridView: View {
         ),
         chapter: 33
     )
+    .environmentObject(StoreManager.shared)
 }

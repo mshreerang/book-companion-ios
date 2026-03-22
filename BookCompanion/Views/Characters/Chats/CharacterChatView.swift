@@ -157,7 +157,7 @@ struct CharacterChatView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(character.fullName)
                     .font(.headline)
-                Text(character.role ?? "Character")
+                Text(headerSubtitle)
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
@@ -174,6 +174,24 @@ struct CharacterChatView: View {
                 .background(Theme.Colors.secondary.opacity(0.12))
                 .foregroundColor(Theme.Colors.secondary)
                 .cornerRadius(Theme.CornerRadius.sm)
+        }
+    }
+
+    /// Subtitle shown below the character name in the chat header.
+    /// Reflects the actual nature of the chat partner based on book type.
+    private var headerSubtitle: String {
+        switch book.bookType {
+        case .autobiography:
+            // In autobiographies the author is always the primary chat partner
+            return character.fullName == book.author ? "Author" : "Real person"
+        case .biography:
+            return "Historical figure"
+        case .selfHelp:
+            return character.fullName == book.author ? "Author" : "Case study"
+        case .practical:
+            return "Expert guide"
+        case .fiction:
+            return character.role ?? "Character"
         }
     }
 

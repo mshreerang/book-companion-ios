@@ -6,6 +6,7 @@
 //  Updated: removed stale "(March)" date from Character Chat feature,
 //           replaced hardcoded blue/purple/green/orange/teal icon colours
 //           with Theme brand colours, CTA gradient uses Theme.
+//           Fixed legal doc URLs to use vivanlabs.com domain.
 //
 
 import SwiftUI
@@ -116,7 +117,6 @@ struct PaywallView: View {
             PaywallFeatureRow(
                 icon: "bubble.left.and.bubble.right.fill",
                 color: Theme.Colors.primary,
-                // Removed stale "(March)" — feature is live
                 text: "Chat with Characters",
                 sub: "Chat with characters — spoiler-safe"
             )
@@ -265,7 +265,6 @@ struct PaywallView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 16)
                 .padding(.horizontal, 12)
-                // CTA uses brand gradient instead of hardcoded blue/purple
                 .background(Theme.Colors.brandGradient)
                 .cornerRadius(Theme.CornerRadius.xl)
             }
@@ -282,11 +281,15 @@ struct PaywallView: View {
 
             Button("Restore Purchases") {
                 Task {
-                    let restored = await store.restorePurchases()
-                    if restored {
+                    await store.restorePurchases()
+                    // Check isPro directly after restore — don't trust the return value
+                    // since sandbox users may have had previous subscriptions
+                    if store.isPro {
                         withAnimation { showSuccess = true }
                         try? await Task.sleep(nanoseconds: 2_500_000_000)
                         dismiss()
+                    } else {
+                        store.purchaseError = "No active subscription found to restore."
                     }
                 }
             }
@@ -315,10 +318,10 @@ struct PaywallView: View {
 
             HStack(spacing: 16) {
                 Link("Privacy Policy",
-                     destination: URL(string: "https://mshreerang.github.io/book-companion-ios/privacy-policy.html")!)
+                     destination: URL(string: "https://mshreerang.github.io/book-companion-docs/privacy-policy.html")!)
                 Text("·").foregroundStyle(.secondary)
                 Link("Terms of Use",
-                     destination: URL(string: "https://mshreerang.github.io/book-companion-ios/terms-of-use.html")!)
+                     destination: URL(string: "https://mshreerang.github.io/book-companion-docs/terms-of-use.html")!)
             }
             .font(.caption2)
             .foregroundStyle(Theme.Colors.primary)
@@ -333,8 +336,6 @@ struct PaywallView: View {
         await store.loadOfferings()
         isLoading = false
     }
-
-    @State private var showSuccess_handlePurchase = false
 
     private func handlePurchase() async {
         guard let pkg = selectedPackage else { return }

@@ -28,6 +28,19 @@ struct CharacterNamesResponse: Codable {
     let names: [String]
     let tokensUsed: Int
     let cached: Bool
+    /// True when Claude doesn't know this book well enough to return accurate names.
+    /// The names array will be empty and limitedMessage will explain why.
+    let limited: Bool
+    let limitedMessage: String?
+
+    init(success: Bool, names: [String], tokensUsed: Int, cached: Bool, limited: Bool = false, limitedMessage: String? = nil) {
+        self.success = success
+        self.names = names
+        self.tokensUsed = tokensUsed
+        self.cached = cached
+        self.limited = limited
+        self.limitedMessage = limitedMessage
+    }
 }
 
 // Response from get-character-details
