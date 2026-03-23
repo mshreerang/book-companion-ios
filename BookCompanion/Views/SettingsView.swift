@@ -2,14 +2,17 @@
 //  SettingsView.swift
 //  BookCompanion
 //
-//  Updated by Shree on 22/02/2026.
-//  Updated: removed branding header (wastes space, user knows the app),
-//           replaced gmail support address with custom domain,
-//           updated brand colours to indigo/teal,
-//           toggle tint uses brand indigo instead of purple.
+//  Updated 2026: removed AI mode toggle (offline mode was a dev tool,
+//  not a user feature — 100% of features need AI), restructured sections
+//  to Account → App → About, added Replay Walkthrough, fixed legal URLs,
+//  App Store link placeholder ready to swap on launch.
 //
 
 import SwiftUI
+
+// ── Swap this URL once the app is live on the App Store ──────────────────────
+private let appStoreURL = URL(string: "https://apps.apple.com")!
+// ─────────────────────────────────────────────────────────────────────────────
 
 struct SettingsView: View {
 
@@ -18,27 +21,27 @@ struct SettingsView: View {
     @EnvironmentObject var storeManager: StoreManager
     @Environment(\.dismiss) private var dismiss
 
-    @State private var cacheSize: Int = 0
     @State private var showPaywall = false
+    @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = true
+    @AppStorage("hasSeenTransparencyScreen") private var hasSeenTransparencyScreen = true
 
     var body: some View {
         NavigationStack {
             List {
 
-                // ── Account & Profile ──────────────────────────────────
+                // ── 1. Account ─────────────────────────────────────────
                 Section {
+
+                    // Profile row
                     HStack(spacing: 16) {
-                        // Initials avatar — brand gradient
                         ZStack {
                             Circle()
                                 .fill(Theme.Colors.brandGradientDiagonal)
-                                .frame(width: 60, height: 60)
-
+                                .frame(width: 56, height: 56)
                             Text(userInitials)
                                 .font(.title2.bold())
                                 .foregroundColor(.white)
                         }
-
                         VStack(alignment: .leading, spacing: 2) {
                             HStack(spacing: 6) {
                                 Text(authManager.userName ?? "User")
@@ -60,12 +63,26 @@ struct SettingsView: View {
                     }
                     .padding(.vertical, 4)
 
+                    // Usage — "Monthly Starter Pack" framing matches onboarding
                     NavigationLink {
                         UsageStatsView()
                     } label: {
-                        Label("Usage & Quota", systemImage: "chart.bar.fill")
+                        HStack {
+                            Label("Monthly Starter Pack", systemImage: "chart.bar.fill")
+                            Spacer()
+                            if !storeManager.isPro {
+                                Text("Free")
+                                    .font(.caption.bold())
+                                    .foregroundColor(Theme.Colors.secondary)
+                                    .padding(.horizontal, 7)
+                                    .padding(.vertical, 3)
+                                    .background(Theme.Colors.secondary.opacity(0.12))
+                                    .cornerRadius(Theme.CornerRadius.xs)
+                            }
+                        }
                     }
 
+                    // Pro management
                     if storeManager.isPro {
                         Link(destination: URL(string: "https://apps.apple.com/account/subscriptions")!) {
                             HStack {
@@ -81,9 +98,11 @@ struct SettingsView: View {
                             HStack {
                                 Label("Upgrade to Pro", systemImage: "crown.fill")
                                     .foregroundStyle(
-                                        LinearGradient(colors: [.yellow, .orange],
-                                                       startPoint: .leading,
-                                                       endPoint: .trailing)
+                                        LinearGradient(
+                                            colors: [.yellow, .orange],
+                                            startPoint: .leading,
+                                            endPoint: .trailing
+                                        )
                                     )
                                 Spacer()
                                 Image(systemName: "chevron.right")
@@ -92,74 +111,49 @@ struct SettingsView: View {
                             }
                         }
                     }
+
+                    // Sign Out — inside Account, not isolated at the bottom
+                    Button(role: .destructive) {
+                        authManager.signOut()
+                    } label: {
+                        Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right")
+                    }
+
                 } header: {
                     Text("Account")
-                }
-
-                // ── Summary Mode ───────────────────────────────────────
-                Section {
-                    Toggle(isOn: $settingsManager.settings.isAIEnabled) {
-                        Label {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(settingsManager.settings.isAIEnabled ? "AI Mode" : "Offline Mode")
-                                    .font(.headline)
-
-                                Text(settingsManager.settings.isAIEnabled
-                                     ? "Personalised summaries for any book"
-                                     : "Sample data only, no internet needed")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
-                        } icon: {
-                            Image(systemName: settingsManager.settings.isAIEnabled ? "sparkles" : "airplane")
-                                .foregroundColor(settingsManager.settings.isAIEnabled
-                                                 ? Theme.Colors.primary   // indigo
-                                                 : Theme.Colors.secondary) // teal
-                        }
-                    }
-                    // Toggle tint uses brand indigo, not generic purple
-                    .tint(Theme.Colors.primary)
-                } header: {
-                    Text("Summary Mode")
                 } footer: {
-                    Text(settingsManager.settings.isAIEnabled
-                         ? "AI generates custom summaries for your books. Requires internet connection."
-                         : "View sample summaries without AI. Perfect for testing the app.")
+                    if !storeManager.isPro {
+                        Text("Pro unlocks unlimited summaries, character analyses and chats every month.")
+                            .font(.footnote)
+                    }
                 }
 
-                // ── Storage ────────────────────────────────────────────
+                // ── 2. About ───────────────────────────────────────────
                 Section {
-                    NavigationLink {
-                        StorageDetailView(cacheSize: $cacheSize)
+
+                    // Replay Walkthrough
+                    Button {
+                        dismiss()
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                            hasSeenTransparencyScreen = false
+                            hasCompletedOnboarding = false
+                        }
                     } label: {
+                        Label("Replay Walkthrough", systemImage: "arrow.counterclockwise")
+                    }
+
+                    // Privacy Policy — updated to book-companion-docs
+                    Link(destination: URL(string: "https://mshreerang.github.io/book-companion-docs/privacy-policy.html")!) {
                         HStack {
-                            Label("Storage", systemImage: "externaldrive.fill")
+                            Label("Privacy Policy", systemImage: "hand.raised")
                             Spacer()
-                            Text(formatBytes(cacheSize))
+                            Image(systemName: "arrow.up.forward")
+                                .font(.caption)
                                 .foregroundColor(.secondary)
                         }
                     }
-                } header: {
-                    Text("Storage")
-                } footer: {
-                    Text("Book cover images are cached locally (up to 100 MB)")
-                }
 
-                // ── Legal & Support ────────────────────────────────────
-                Section {
-                    if let url = URL(string: "https://mshreerang.github.io/book-companion-ios/privacy-policy.html") {
-                        Link(destination: url) {
-                            HStack {
-                                Label("Privacy Policy", systemImage: "hand.raised")
-                                Spacer()
-                                Image(systemName: "arrow.up.forward")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
-                        }
-                    }
-
-                    // Updated: custom domain email replaces personal Gmail
+                    // Support
                     Link(destination: URL(string: "mailto:support@vivanlabs.com")!) {
                         HStack {
                             Label("Support", systemImage: "questionmark.circle")
@@ -170,28 +164,17 @@ struct SettingsView: View {
                         }
                     }
 
+                    // Share App — swap appStoreURL constant when live
                     ShareLink(
-                        item: URL(string: "https://apps.apple.com")!,
-                        subject: Text("BookCompanion"),
-                        message: Text("Check out BookCompanion - never lose your place in a book again!")
+                        item: appStoreURL,
+                        subject: Text("BookCompanion AI"),
+                        message: Text("Never lose your place in a book again — BookCompanion gives you AI summaries and character guides, spoiler-free.")
                     ) {
                         Label("Share App", systemImage: "square.and.arrow.up")
                     }
-                } header: {
-                    Text("Legal & Support")
-                }
 
-                // ── Destructive ────────────────────────────────────────
-                Section {
-                    Button(role: .destructive) {
-                        authManager.signOut()
-                    } label: {
-                        HStack {
-                            Spacer()
-                            Text("Sign Out")
-                            Spacer()
-                        }
-                    }
+                } header: {
+                    Text("About")
                 }
 
                 // ── Version footer ─────────────────────────────────────
@@ -201,17 +184,17 @@ struct SettingsView: View {
                         Text("Made with ❤️ in London")
                     }
                     .frame(maxWidth: .infinity)
+                    .multilineTextAlignment(.center)
                     .padding(.top, 8)
                 }
             }
             .navigationTitle("Settings")
-            .navigationBarTitleDisplayMode(.inline)
+            .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Done") { dismiss() }
                 }
             }
-            .onAppear { loadCacheSize() }
             .sheet(isPresented: $showPaywall) {
                 PaywallView()
                     .environmentObject(storeManager)
@@ -223,10 +206,10 @@ struct SettingsView: View {
 
     private var userInitials: String {
         guard let name = authManager.userName else { return "?" }
-        let components = name.split(separator: " ")
-        if components.count >= 2 {
-            return "\(components.first?.first ?? "?")\(components.last?.first ?? "?")".uppercased()
-        } else if let first = components.first?.first {
+        let parts = name.split(separator: " ")
+        if parts.count >= 2 {
+            return "\(parts.first?.first ?? "?")\(parts.last?.first ?? "?")".uppercased()
+        } else if let first = parts.first?.first {
             return String(first).uppercased()
         }
         return "?"
@@ -240,12 +223,6 @@ struct SettingsView: View {
         Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
     }
 
-    private func loadCacheSize() {
-        Task {
-            let size = await CoverImageManager.shared.getTotalStorageUsed()
-            await MainActor.run { cacheSize = size }
-        }
-    }
 }
 
 // MARK: - Global Helpers
@@ -255,58 +232,6 @@ func formatBytes(_ bytes: Int) -> String {
     formatter.allowedUnits = [.useMB, .useKB]
     formatter.countStyle = .file
     return bytes < 100_000 ? "Empty" : formatter.string(fromByteCount: Int64(bytes))
-}
-
-// MARK: - Storage Detail View
-
-struct StorageDetailView: View {
-
-    @Binding var cacheSize: Int
-    @State private var showingClearAlert = false
-    @Environment(\.dismiss) private var dismiss
-
-    var body: some View {
-        List {
-            Section {
-                HStack {
-                    Label("Cover Images Cache", systemImage: "photo.stack")
-                    Spacer()
-                    Text(formatBytes(cacheSize))
-                        .foregroundColor(.secondary)
-                }
-            } header: {
-                Text("Storage Usage")
-            }
-
-            Section {
-                Button(role: .destructive) {
-                    showingClearAlert = true
-                } label: {
-                    Label("Clear Cover Cache", systemImage: "trash")
-                }
-            } footer: {
-                Text("This will remove all cached book cover images. They will be re-downloaded when needed.")
-            }
-        }
-        .navigationTitle("Storage")
-        .alert("Clear Cover Cache?", isPresented: $showingClearAlert) {
-            Button("Cancel", role: .cancel) { }
-            Button("Clear", role: .destructive) {
-                Task { await clearCache() }
-            }
-        } message: {
-            Text("This will delete all cached images (\(formatBytes(cacheSize))).")
-        }
-    }
-
-    private func clearCache() async {
-        await CoverImageManager.shared.clearAllCovers()
-        HapticManager.success()
-        let size = await CoverImageManager.shared.getTotalStorageUsed()
-        await MainActor.run { cacheSize = size }
-        try? await Task.sleep(nanoseconds: 500_000_000)
-        await MainActor.run { dismiss() }
-    }
 }
 
 #Preview {

@@ -17,7 +17,6 @@ struct BookCompanionApp: App {
     @StateObject private var storeManager = StoreManager.shared
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
     @AppStorage("hasSeenTransparencyScreen") private var hasSeenTransparencyScreen = false
-    @State private var showOnboarding: Bool
     @State private var showTransparency = false
     @StateObject private var bookManager = BookManager()
     @Environment(\.scenePhase) private var scenePhase
@@ -31,10 +30,6 @@ struct BookCompanionApp: App {
             StoreManager.shared.configure()
         }
 
-        // 1. Check onboarding status
-        let hasCompleted = UserDefaults.standard.bool(forKey: "hasCompletedOnboarding")
-        _showOnboarding = State(initialValue: !hasCompleted)
-        
         // 2. Configure image cache
         let cache = URLCache(
             memoryCapacity: 50_000_000,
@@ -66,9 +61,9 @@ struct BookCompanionApp: App {
     var body: some Scene {
         WindowGroup {
             Group {
-                if showOnboarding {
+                if !hasCompletedOnboarding {
                     OnboardingView {
-                        showOnboarding = false
+                        hasCompletedOnboarding = true
                     }
                 } else if !authManager.isSignedIn {
                     SignInView(authManager: authManager)

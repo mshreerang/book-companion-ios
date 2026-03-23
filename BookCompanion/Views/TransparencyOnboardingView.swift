@@ -115,7 +115,7 @@ struct TransparencyOnboardingView: View {
                             TransparencyItem(
                                 label: "Account deletion",
                                 // Updated: custom domain email replaces personal Gmail
-                                detail: "Email support@bookcompanion.app at any time to delete your account and all associated data."
+                                detail: "Email support@vivanlabs.com at any time to delete your account and all associated data."
                             ),
                             TransparencyItem(
                                 label: "UK GDPR",
@@ -134,7 +134,7 @@ struct TransparencyOnboardingView: View {
 
                     HStack(spacing: 16) {
                         Link("Privacy Policy",
-                             destination: URL(string: "https://mshreerang.github.io/book-companion-ios/privacy-policy.html")!)
+                             destination: URL(string: "https://mshreerang.github.io/book-companion-docs/privacy-policy.html")!)
                             .font(.footnote)
                             .foregroundStyle(Theme.Colors.primary)
 
@@ -143,7 +143,7 @@ struct TransparencyOnboardingView: View {
                             .font(.footnote)
 
                         Link("Terms of Use",
-                             destination: URL(string: "https://mshreerang.github.io/book-companion-ios/terms-of-use.html")!)
+                             destination: URL(string: "https://mshreerang.github.io/book-companion-docs/terms-of-use.html")!)
                             .font(.footnote)
                             .foregroundStyle(Theme.Colors.primary)
                     }
