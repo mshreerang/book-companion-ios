@@ -22,6 +22,8 @@ struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var showPaywall = false
+    @State private var showDeleteAccountAlert = false
+    @State private var isDeletingAccount = false
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = true
     @AppStorage("hasSeenTransparencyScreen") private var hasSeenTransparencyScreen = true
 
@@ -119,6 +121,13 @@ struct SettingsView: View {
                         Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right")
                     }
 
+                    // Delete Account — required by App Store guideline 5.1.1(v)
+                    Button(role: .destructive) {
+                        showDeleteAccountAlert = true
+                    } label: {
+                        Label("Delete Account", systemImage: "person.crop.circle.badge.minus")
+                    }
+
                 } header: {
                     Text("Account")
                 } footer: {
@@ -199,10 +208,60 @@ struct SettingsView: View {
                 PaywallView()
                     .environmentObject(storeManager)
             }
+            .alert("Delete Account", isPresented: $showDeleteAccountAlert) {
+                Button("Cancel", role: .cancel) { }
+                Button("Delete Account", role: .destructive) {
+                    Task { await deleteAccount() }
+                }
+            } message: {
+                Text("This will permanently delete your account and all data — your library, reading progress and chat history cannot be recovered.\n\nIf you have an active Pro subscription, please cancel it via Apple ID Account Settings before deleting to avoid future charges. If you rejoin later, your subscription may restore automatically but your library will not.")
+            }
+            .overlay {
+                if isDeletingAccount {
+                    ZStack {
+                        Color.black.opacity(0.4).ignoresSafeArea()
+                        VStack(spacing: 16) {
+                            ProgressView()
+                                .scaleEffect(1.4)
+                                .tint(.white)
+                            Text("Deleting account…")
+                                .foregroundColor(.white)
+                                .font(.subheadline)
+                        }
+                    }
+                }
+            }
         }
     }
 
     // MARK: - Helpers
+
+    private func deleteAccount() async {
+        isDeletingAccount = true
+        do {
+            guard let token = KeychainManager.shared.getUserToken() else {
+                isDeletingAccount = false
+                return
+            }
+            let url = URL(string: "\(Config.apiEndpoint)/api/auth/delete-account")!
+            var request = URLRequest(url: url)
+            request.httpMethod = "POST"
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            let (_, response) = try await URLSession.shared.data(for: request)
+            if let http = response as? HTTPURLResponse, http.statusCode == 200 {
+                await MainActor.run {
+                    isDeletingAccount = false
+                    authManager.signOut()
+                }
+            } else {
+                await MainActor.run { isDeletingAccount = false }
+            }
+        } catch {
+            await MainActor.run { isDeletingAccount = false }
+            print("❌ Delete account error: \(error)")
+        }
+    }
 
     private var userInitials: String {
         guard let name = authManager.userName else { return "?" }
