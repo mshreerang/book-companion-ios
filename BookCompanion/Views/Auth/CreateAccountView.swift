@@ -34,13 +34,7 @@ struct CreateAccountView: View {
                     VStack(spacing: 8) {
                         Image(systemName: "person.crop.circle.badge.plus")
                             .font(.system(size: 52))
-                            .foregroundStyle(
-                                LinearGradient(
-                                    colors: [.blue, .purple],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
+                            .foregroundStyle(Theme.Colors.brandGradientDiagonal)
                             .padding(.top, 8)
                         
                         Text("Create Account")
@@ -71,9 +65,7 @@ struct CreateAccountView: View {
                 }
             }
             .onDisappear {
-                // Reset verification state when sheet dismissed so re-opening works
-                authManager.emailVerificationSent = false
-                authManager.error = nil
+                authManager.clearEmailVerificationState()
             }
         }
     }
@@ -103,7 +95,7 @@ struct CreateAccountView: View {
                         .cornerRadius(12)
                         .overlay(
                             RoundedRectangle(cornerRadius: 12)
-                                .stroke(focusedField == .name ? Color.blue.opacity(0.5) : Color.clear, lineWidth: 1.5)
+                                .stroke(focusedField == .name ? Theme.Colors.primary.opacity(0.5) : Color.clear, lineWidth: 1.5)
                         )
                         .onSubmit { focusedField = .email }
                 }
@@ -127,7 +119,7 @@ struct CreateAccountView: View {
                         .cornerRadius(12)
                         .overlay(
                             RoundedRectangle(cornerRadius: 12)
-                                .stroke(focusedField == .email ? Color.blue.opacity(0.5) : Color.clear, lineWidth: 1.5)
+                                .stroke(focusedField == .email ? Theme.Colors.primary.opacity(0.5) : Color.clear, lineWidth: 1.5)
                         )
                         .onSubmit { focusedField = .password }
                 }
@@ -148,7 +140,7 @@ struct CreateAccountView: View {
                         .cornerRadius(12)
                         .overlay(
                             RoundedRectangle(cornerRadius: 12)
-                                .stroke(focusedField == .password ? Color.blue.opacity(0.5) : Color.clear, lineWidth: 1.5)
+                                .stroke(focusedField == .password ? Theme.Colors.primary.opacity(0.5) : Color.clear, lineWidth: 1.5)
                         )
                         .onSubmit { focusedField = .confirmPassword }
                     
@@ -177,7 +169,7 @@ struct CreateAccountView: View {
                             RoundedRectangle(cornerRadius: 12)
                                 .stroke(
                                     passwordMismatch ? Color.red.opacity(0.5) :
-                                    (focusedField == .confirmPassword ? Color.blue.opacity(0.5) : Color.clear),
+                                    (focusedField == .confirmPassword ? Theme.Colors.primary.opacity(0.5) : Color.clear),
                                     lineWidth: 1.5
                                 )
                         )
@@ -212,12 +204,12 @@ struct CreateAccountView: View {
                         Text("I agree to the")
                             .font(.subheadline)
                             .foregroundColor(.primary)
-                        Link("Terms of Use", destination: URL(string: "https://mshreerang.github.io/book-companion-ios/terms.html")!)
+                        Link("Terms of Use", destination: URL(string: "https://mshreerang.github.io/book-companion-docs/terms-of-use.html")!)
                             .font(.subheadline)
                         Text("and")
                             .font(.subheadline)
                             .foregroundColor(.primary)
-                        Link("Privacy Policy", destination: URL(string: "https://mshreerang.github.io/book-companion-ios/privacy-policy.html")!)
+                        Link("Privacy Policy", destination: URL(string: "https://mshreerang.github.io/book-companion-docs/privacy-policy.html")!)
                             .font(.subheadline)
                     }
                 }
@@ -263,14 +255,13 @@ struct CreateAccountView: View {
                 .frame(maxWidth: .infinity)
                 .frame(height: 52)
                 .background(
-                    LinearGradient(
-                        colors: canSubmit ? [.blue, .purple] : [.gray, .gray],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
+                    canSubmit
+                    ? Theme.Colors.brandGradient
+                    : LinearGradient(colors: [.gray, .gray],
+                                     startPoint: .leading, endPoint: .trailing)
                 )
                 .cornerRadius(14)
-                .shadow(color: canSubmit ? .blue.opacity(0.25) : .clear, radius: 8, x: 0, y: 4)
+                .shadow(color: canSubmit ? Theme.Colors.primary.opacity(0.25) : .clear, radius: 8, x: 0, y: 4)
             }
             .disabled(!canSubmit || authManager.isLoading)
             
@@ -282,7 +273,7 @@ struct CreateAccountView: View {
                     Text("Already have an account?")
                         .foregroundColor(.secondary)
                     Text("Sign in")
-                        .foregroundColor(.blue)
+                        .foregroundColor(Theme.Colors.primary)
                         .fontWeight(.medium)
                 }
                 .font(.subheadline)
@@ -297,9 +288,7 @@ struct CreateAccountView: View {
             VStack(spacing: 16) {
                 Image(systemName: "envelope.badge.checkmark.fill")
                     .font(.system(size: 64))
-                    .foregroundStyle(
-                        LinearGradient(colors: [.green, .mint], startPoint: .topLeading, endPoint: .bottomTrailing)
-                    )
+                    .foregroundStyle(Theme.Colors.brandGradientDiagonal)
                 
                 VStack(spacing: 8) {
                     Text("Check Your Email")
@@ -329,9 +318,7 @@ struct CreateAccountView: View {
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
                     .frame(height: 52)
-                    .background(
-                        LinearGradient(colors: [.blue, .purple], startPoint: .leading, endPoint: .trailing)
-                    )
+                    .background(Theme.Colors.brandGradient)
                     .cornerRadius(14)
             }
         }

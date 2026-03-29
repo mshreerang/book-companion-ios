@@ -13,11 +13,15 @@ struct SignInView: View {
 
     @ObservedObject var authManager: AuthManager
 
+    @EnvironmentObject private var deepLinkManager: DeepLinkManager
+
     @State private var email = ""
     @State private var password = ""
     @State private var showEmailFields = false
     @State private var showCreateAccount = false
     @State private var showForgotPassword = false
+    @State private var bannerMessage: String? = nil
+    @State private var bannerStyle: BannerStyle = .success
 
     var body: some View {
         // GeometryReader lets us vertically centre the content group
@@ -145,7 +149,34 @@ struct SignInView: View {
             ForgotPasswordView(authManager: authManager)
         }
         .animation(.default, value: authManager.error)
-    }
+        .overlay(alignment: .top) {
+            if let message = bannerMessage {
+                NotificationBanner(
+                    message: message,
+                    style: bannerStyle,
+                    onDismiss: { bannerMessage = nil }
+                )
+                .padding(.top, 16)
+                .transition(.move(edge: .top).combined(with: .opacity))
+                .animation(.spring(response: 0.4, dampingFraction: 0.8), value: bannerMessage)
+            }
+        }
+        .onChange(of: deepLinkManager.pendingLink) { _, link in
+            guard let link else { return }
+            switch link {
+            case .emailConfirmed:
+                bannerStyle = .success
+                bannerMessage = "Email confirmed! You can now sign in."
+                deepLinkManager.consume()
+            case .resetPassword:
+                bannerStyle = .success
+                bannerMessage = "Password updated. Please sign in."
+                deepLinkManager.consume()
+            case .search:
+                break // handled in BookSearchView
+            }
+        }
+        }
 
     // MARK: - Email sign-in fields
 

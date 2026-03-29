@@ -25,7 +25,7 @@ struct ForgotPasswordView: View {
                     Image(systemName: "lock.rotation")
                         .font(.system(size: 52))
                         .foregroundStyle(
-                            LinearGradient(colors: [.blue, .purple], startPoint: .topLeading, endPoint: .bottomTrailing)
+                            Theme.Colors.brandGradientDiagonal
                         )
                     
                     Text("Reset Password")
@@ -67,7 +67,7 @@ struct ForgotPasswordView: View {
                                 .frame(maxWidth: .infinity)
                                 .frame(height: 52)
                                 .background(
-                                    LinearGradient(colors: [.blue, .purple], startPoint: .leading, endPoint: .trailing)
+                                    Theme.Colors.brandGradient
                                 )
                                 .cornerRadius(14)
                         }
@@ -95,7 +95,7 @@ struct ForgotPasswordView: View {
                                 .cornerRadius(12)
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 12)
-                                        .stroke(emailFocused ? Color.blue.opacity(0.5) : Color.clear, lineWidth: 1.5)
+                                        .stroke(emailFocused ? Theme.Colors.primary.opacity(0.5) : Color.clear, lineWidth: 1.5)
                                 )
                                 .onSubmit { sendReset() }
                         }
@@ -126,11 +126,10 @@ struct ForgotPasswordView: View {
                             .frame(maxWidth: .infinity)
                             .frame(height: 52)
                             .background(
-                                LinearGradient(
-                                    colors: canSubmit ? [.blue, .purple] : [.gray, .gray],
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                )
+                                canSubmit
+                                ? Theme.Colors.brandGradient
+                                : LinearGradient(colors: [.gray, .gray],
+                                                 startPoint: .leading, endPoint: .trailing)
                             )
                             .cornerRadius(14)
                         }
@@ -150,8 +149,7 @@ struct ForgotPasswordView: View {
             }
             .onAppear { emailFocused = true }
             .onDisappear {
-                authManager.passwordResetSent = false
-                authManager.error = nil
+                authManager.clearPasswordResetState()
             }
         }
     }

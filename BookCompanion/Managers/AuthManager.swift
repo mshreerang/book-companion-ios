@@ -197,6 +197,18 @@ class AuthManager: NSObject, ObservableObject {
     }
     
     // MARK: - Sign Out
+
+    /// Resets email verification UI state — called when CreateAccountView dismisses
+    func clearEmailVerificationState() {
+        emailVerificationSent = false
+        error = nil
+    }
+
+    /// Resets password reset UI state — called when ForgotPasswordView dismisses
+    func clearPasswordResetState() {
+        passwordResetSent = false
+        error = nil
+    }
     
     func signOut() {
         AnalyticsManager.shared.track(event: "sign_out")

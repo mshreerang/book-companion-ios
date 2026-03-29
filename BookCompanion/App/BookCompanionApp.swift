@@ -19,6 +19,7 @@ struct BookCompanionApp: App {
     @AppStorage("hasSeenTransparencyScreen") private var hasSeenTransparencyScreen = false
     @State private var showTransparency = false
     @StateObject private var bookManager = BookManager()
+    @StateObject private var deepLinkManager = DeepLinkManager()
     @Environment(\.scenePhase) private var scenePhase
     
     init() {
@@ -100,10 +101,14 @@ struct BookCompanionApp: App {
             }
             .environmentObject(authManager)
             .environmentObject(storeManager)
+            .environmentObject(deepLinkManager)
             .onChange(of: scenePhase) { _, newPhase in
                 if newPhase == .active {
                     Task { await StoreManager.shared.syncEntitlement() }
                 }
+            }
+            .onOpenURL { url in
+                deepLinkManager.handle(url: url)
             }
         }
     }

@@ -14,6 +14,7 @@ final class AppContainer {
     
     let settingsManager = SettingsManager()
     let bookManager = BookManager()  // ✅ User's library
+    let deepLinkManager = DeepLinkManager()
     
     // MARK: - Repositories
     

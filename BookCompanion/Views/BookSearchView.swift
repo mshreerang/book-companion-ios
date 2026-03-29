@@ -8,7 +8,11 @@ struct BookSearchView: View {
     @ObservedObject var bookManager: BookManager
     @State private var showingAddBook = false
     @State private var showingSettings = false
-
+    @EnvironmentObject private var deepLinkManager: DeepLinkManager
+    @State private var bannerMessage: String? = nil
+    @State private var bannerStyle: BannerStyle = .success
+    
+    
     private let makeProgressViewModel: (Book) -> ProgressInputViewModel
     private let makeSummaryViewModel: (Book, Language, SummaryLength) -> SummaryViewModel
     private let makeCharactersViewModel: (Book, Language) -> CharactersViewModel
@@ -84,6 +88,28 @@ struct BookSearchView: View {
         }
         .sheet(isPresented: $showingSettings) {
             SettingsView(settingsManager: settingsManager)
+        }
+        .overlay(alignment: .top) {
+            if let message = bannerMessage {
+                NotificationBanner(
+                    message: message,
+                    style: bannerStyle,
+                    onDismiss: { bannerMessage = nil }
+                )
+                .padding(.top, 16)
+                .transition(.move(edge: .top).combined(with: .opacity))
+                .animation(.spring(response: 0.4, dampingFraction: 0.8), value: bannerMessage)
+            }
+        }
+        .onChange(of: deepLinkManager.pendingLink) { _, link in
+            guard let link else { return }
+            switch link {
+            case .search:
+                showingAddBook = true
+                deepLinkManager.consume()
+            case .emailConfirmed, .resetPassword:
+                break // handled in SignInView
+            }
         }
         // FAB + mode badge — hidden on empty state
         .overlay(alignment: .bottomTrailing) {
