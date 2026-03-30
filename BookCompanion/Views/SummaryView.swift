@@ -10,6 +10,7 @@ struct SummaryView: View {
     let language: Language
 
     @State private var showingShareSheet = false
+    @State private var showPaywall = false
     @EnvironmentObject private var storeManager: StoreManager
     @ObservedObject private var ttsManager = TextToSpeechManager.shared
 
@@ -34,12 +35,16 @@ struct SummaryView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
 
-            // Quota nudge
-            if viewModel.showQuotaNudge {
-                QuotaNudgeBanner(isShowing: $viewModel.showQuotaNudge)
-                    .transition(.move(edge: .top).combined(with: .opacity))
-                    .animation(.spring(response: 0.4, dampingFraction: 0.8), value: viewModel.showQuotaNudge)
-            }
+            // Quota counter — shown when user has 2 or fewer summaries remaining
+                        if viewModel.showQuotaNudge,
+                           let used = viewModel.quotaUsed,
+                           let limit = viewModel.quotaLimit {
+                            QuotaCounterView(used: used, limit: limit, onUpgrade: {
+                                showPaywall = true
+                            })
+                            .transition(.move(edge: .top).combined(with: .opacity))
+                            .animation(.spring(response: 0.4, dampingFraction: 0.8), value: viewModel.showQuotaNudge)
+                        }
 
             // Status badges row
             if viewModel.error == nil && !viewModel.isLoading {
@@ -141,9 +146,13 @@ struct SummaryView: View {
             }
         }
         .sheet(isPresented: $viewModel.showPaywall) {
-            PaywallView(triggerReason: viewModel.paywallTriggerReason)
-                .environmentObject(storeManager)
-        }
+                    PaywallView(triggerReason: viewModel.paywallTriggerReason)
+                        .environmentObject(storeManager)
+                }
+                .sheet(isPresented: $showPaywall) {
+                    PaywallView(triggerReason: "Upgrade to Pro for unlimited summaries.")
+                        .environmentObject(storeManager)
+                }
     }
 
     // MARK: - Vani Active Check
@@ -289,7 +298,7 @@ struct QuotaNudgeBanner: View {
         HStack(spacing: 10) {
             Image(systemName: "exclamationmark.circle.fill")
                 .foregroundStyle(.orange)
-            Text("1 free summary remaining this month — Go Pro for unlimited")
+            Text("Running low on summaries this month — Go Pro for unlimited access.")
                 .font(.caption)
                 .fontWeight(.medium)
                 .foregroundStyle(.primary)

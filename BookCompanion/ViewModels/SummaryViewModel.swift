@@ -19,6 +19,8 @@ class SummaryViewModel: ObservableObject {
     @Published var showPaywall = false
     @Published var paywallTriggerReason = ""
     @Published var showQuotaNudge = false
+    @Published var quotaUsed: Int? = nil
+    @Published var quotaLimit: Int? = nil
 
     // ── Vani TTS Player ───────────────────────────────────────────────────────
     // Observed by SummaryView to conditionally show ActiveNarratorView.
@@ -309,23 +311,22 @@ class SummaryViewModel: ObservableObject {
 
                         // Fire Vani pre-warm with FULL summary text.
                         // Streaming is done so TTS gets the complete text.
-                        Task {
-                            await vaniPlayer.prewarm(
-                                text: summary.content,
-                                language: language,
-                                bookId: book.id.uuidString,
-                                chapterNumber: chapter
-                            )
-                        }
+                        // Vani pre-warm is user-triggered — tap the idle bar to start
 
-                        // Show nudge toast when user has 1 free summary remaining
+                        // Show nudge toast when user has 1 or 2 free summaries remaining
+                        // Update quota state for counter display
                         if let quota = event.quota,
-                           let remaining = quota["remaining"] as? Int,
-                           remaining == 1,
-                           let isPro = quota["isPro"] as? Bool,
-                           !isPro {
-                            self.showQuotaNudge = true
-                        }
+                        let isPro = quota["isPro"] as? Bool,
+                            !isPro {
+                                    let used = quota["used"] as? Int
+                                    let limit = quota["limit"] as? Int
+                                    let remaining = quota["remaining"] as? Int ?? 5
+                                    self.quotaUsed = used
+                                    self.quotaLimit = limit
+                                        if remaining <= 2 {
+                                                        self.showQuotaNudge = true
+                                                    }
+                                                }
                         
                         // ✅ ANALYTICS: Track success
                         let generationTime = Date().timeIntervalSince(startTime)
@@ -376,14 +377,7 @@ class SummaryViewModel: ObservableObject {
         self.isStreaming = false
 
         // Vani pre-warm with full cached summary text
-        Task {
-            await vaniPlayer.prewarm(
-                text: summary.content,
-                language: language,
-                bookId: book.id.uuidString,
-                chapterNumber: chapter
-            )
-        }
+        // Vani pre-warm is user-triggered — tap the idle bar to start
     }
 
     // MARK: - Cache Management
