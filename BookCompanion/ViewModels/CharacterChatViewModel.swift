@@ -161,10 +161,24 @@ final class CharacterChatViewModel: ObservableObject {
         // 3. Persist before the network call so the user bubble survives a crash
         persistSession()
 
-        // 4. Fire the SSE request
-        Task {
-            await streamResponse(userMessage: text)
-        }
+        // 4. Track first message in session
+                if messages.filter({ $0.role == .user }).count == 1 {
+                    AnalyticsManager.shared.track(
+                        event: "character_chat_started",
+                        properties: [
+                            "book_title":     book.title,
+                            "author":         book.author,
+                            "character_name": character.fullName,
+                            "book_type":      book.bookType.rawValue,
+                            "chapter":        chapter
+                        ]
+                    )
+                }
+
+                // 5. Fire the SSE request
+                Task {
+                    await streamResponse(userMessage: text)
+                }
     }
 
     // MARK: - Core SSE Streaming
