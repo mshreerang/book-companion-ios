@@ -10,8 +10,8 @@
 
 import SwiftUI
 
-// ── Swap this URL once the app is live on the App Store ──────────────────────
-private let appStoreURL = URL(string: "https://apps.apple.com")!
+
+private let appStoreURL = URL(string: "https://apps.apple.com/gb/app/bookcompanion-ai/id6759411769")!
 // ─────────────────────────────────────────────────────────────────────────────
 
 struct SettingsView: View {

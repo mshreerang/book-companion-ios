@@ -43,8 +43,8 @@ struct OnboardingSingleScreen: View {
     @Environment(\.colorScheme) private var colorScheme
 
     private let chatBubbles: [(isUser: Bool, text: String)] = [
-        (false, "For you, a thousand times over."),
-        (true,  "Did you know Amir was there that day?"),
+        (true,  "How did you figure out it was a basilisk?"),
+        (false, "I'd been researching in the library for weeks. The clues were all there."),
     ]
 
     var body: some View {
@@ -124,14 +124,14 @@ struct OnboardingSingleScreen: View {
                                         .foregroundColor(.white)
                                 )
                             VStack(alignment: .leading, spacing: 0) {
-                                Text("Hassan")
+                                Text("Hermione")
                                     .font(.system(size: 12, weight: .semibold))
-                                Text("The Kite Runner")
+                                Text("Harry Potter and the Chamber of Secrets")
                                     .font(.system(size: 10))
                                     .foregroundColor(.secondary)
                             }
                             Spacer()
-                            Text("Ch. 15")
+                            Text("Ch. 12")
                                 .font(.system(size: 10, weight: .semibold))
                                 .foregroundColor(Theme.Colors.secondary)
                                 .padding(.horizontal, 6)
