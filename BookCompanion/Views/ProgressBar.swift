@@ -23,29 +23,19 @@ struct ProgressBar: View {
     
     var body: some View {
         HStack(spacing: 8) {
-            // Progress bar
             GeometryReader { geometry in
                 ZStack(alignment: .leading) {
-                    // Background
                     RoundedRectangle(cornerRadius: height / 2)
                         .fill(Color(UIColor.systemGray5))
                         .frame(height: height)
                     
-                    // Progress fill
                     RoundedRectangle(cornerRadius: height / 2)
-                        .fill(
-                            LinearGradient(
-                                colors: progressColors,
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
+                        .fill(progressColor)
                         .frame(width: geometry.size.width * progress, height: height)
                 }
             }
             .frame(height: height)
             
-            // Percentage text (optional)
             if showPercentage {
                 Text("\(Int(progress * 100))%")
                     .font(.caption)
@@ -55,17 +45,18 @@ struct ProgressBar: View {
         }
     }
     
-    // Color gradient based on progress
-    private var progressColors: [Color] {
+    // Single flat colour based on progress — no gradient.
+    // Low: terracotta warning tone. Mid/high: primary green.
+    private var progressColor: Color {
         switch progress {
         case 0..<0.33:
-            return [Color.blue, Color.cyan]
-        case 0.33..<0.66:
-            return [Color.orange, Color.yellow]
-        case 0.66...1.0:
-            return [Color.green, Color.mint]
+            return Theme.Colors.secondary       // terracotta — early progress
+        case 0.33..<0.80:
+            return Theme.Colors.primary         // forest green — good progress
+        case 0.80...1.0:
+            return Theme.Colors.primary         // forest green — near/complete
         default:
-            return [Color.gray]
+            return Color(UIColor.systemGray3)
         }
     }
 }

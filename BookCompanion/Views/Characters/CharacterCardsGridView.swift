@@ -69,8 +69,19 @@ struct CharacterCardsGridView: View {
         .sheet(isPresented: $showPaywall, onDismiss: {
             if store.isPro { performReload() }
         }) {
-            PaywallView(triggerReason: "Upgrade to Pro for unlimited character analyses.")
-                .environmentObject(store)
+            if GuestManager.shared.isGuestMode {
+                GuestLimitView(
+                    featureType: .character,
+                    onCreateAccount: {
+                        showPaywall = false
+                        GuestManager.shared.exitGuestMode()
+                    },
+                    onDismiss: { showPaywall = false }
+                )
+            } else {
+                PaywallView(triggerReason: "Upgrade to Pro for unlimited character analyses.")
+                    .environmentObject(store)
+            }
         }
     }
 

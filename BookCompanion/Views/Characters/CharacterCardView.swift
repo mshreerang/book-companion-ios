@@ -104,8 +104,19 @@ struct CharacterCardView: View {
             }
         }
         .sheet(isPresented: $showPaywall) {
-            PaywallView(triggerReason: "Upgrade to Pro for unlimited character analyses.")
-                .environmentObject(StoreManager.shared)
+            if GuestManager.shared.isGuestMode {
+                GuestLimitView(
+                    featureType: .character,
+                    onCreateAccount: {
+                        showPaywall = false
+                        GuestManager.shared.exitGuestMode()
+                    },
+                    onDismiss: { showPaywall = false }
+                )
+            } else {
+                PaywallView(triggerReason: "Upgrade to Pro for unlimited character analyses.")
+                    .environmentObject(StoreManager.shared)
+            }
         }
         // When Pro is granted (purchase or restore), dismiss the paywall sheet
         // and clear the quota exceeded state so characters reload automatically

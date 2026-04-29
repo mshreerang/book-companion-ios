@@ -180,8 +180,11 @@ class SummaryViewModel: ObservableObject {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        // Get user token from Keychain
-        if let userToken = KeychainManager.shared.getUserToken() {
+
+        // Auth: JWT for signed-in users, device hash for guests
+        if GuestManager.shared.isGuestMode {
+            request.setValue(GuestManager.shared.deviceHash, forHTTPHeaderField: "X-Device-Hash")
+        } else if let userToken = KeychainManager.shared.getUserToken() {
             request.setValue("Bearer \(userToken)", forHTTPHeaderField: "Authorization")
         } else {
             throw AuthError.invalidResponse
@@ -189,7 +192,6 @@ class SummaryViewModel: ObservableObject {
         request.timeoutInterval = Config.summaryTimeoutSeconds
         
         // Build series context if this book is part of a series
-        // SeriesManager.buildAIContext returns nil for standalone books — no overhead
         let seriesContext = SeriesManager.shared.buildAIContext(for: book, allBooks: allBooks)
 
         var body: [String: Any] = [
@@ -202,7 +204,6 @@ class SummaryViewModel: ObservableObject {
             "stream": true
         ]
 
-        // Inject series context when available — backend injects it into the prompt
         if let ctx = seriesContext,
            let encoded = try? JSONEncoder().encode(ctx),
            let dict = try? JSONSerialization.jsonObject(with: encoded) as? [String: Any] {
@@ -223,18 +224,15 @@ class SummaryViewModel: ObservableObject {
 
         // ✅ Check status code BEFORE reading stream
         if httpResponse.statusCode == 429 {
-            // Read error response
             var errorText = ""
             for try await line in bytes.lines {
                 errorText += line
             }
             
-            // Try to parse JSON error
             if let errorData = errorText.data(using: .utf8),
                let errorJson = try? JSONSerialization.jsonObject(with: errorData) as? [String: Any],
                let errorMessage = errorJson["message"] as? String {
                 
-                // ✅ ANALYTICS: Track quota exceeded
                 AnalyticsManager.shared.track(
                     event: "quota_limit_reached",
                     properties: [
@@ -247,7 +245,6 @@ class SummaryViewModel: ObservableObject {
                 throw AIError.quotaExceeded(errorMessage)
             }
             
-            // ✅ ANALYTICS: Track rate limit
             AnalyticsManager.shared.track(
                 event: "rate_limit_reached",
                 properties: [
@@ -271,13 +268,20 @@ class SummaryViewModel: ObservableObject {
 
         var fullSummary = ""
 
-        // ✅ PROCESS STREAM LINE BY LINE (only reaches here if 200)
+        // ✅ PROCESS STREAM LINE BY LINE
         for try await line in bytes.lines {
            if line.hasPrefix("data: ") {
-                let jsonString = String(line.dropFirst(6)) // Remove "data: "
+                let jsonString = String(line.dropFirst(6))
                 
-                if let data = jsonString.data(using: .utf8),
-                   let event = try? JSONDecoder().decode(StreamEvent.self, from: data) {
+               if let data = jsonString.data(using: .utf8),
+                  let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let eventType = json["type"] as? String {
+                   let event = StreamEvent(
+                       type: eventType,
+                       content: json["content"] as? String,
+                       summary: json["summary"] as? String,
+                       quota: json["quota"] as? [String: Any]
+                   )
                     
                     switch event.type {
                     case "chunk":
@@ -299,34 +303,44 @@ class SummaryViewModel: ObservableObject {
                             generatedAt: Date()
                         )
                         
-                        // Save to cache
                         saveSummaryToCache(summary, chapter: chapter)
                         
-                        // Update UI with final canonical text
                         self.summary = summary
                         self.streamingText = summary.content
                         self.isLoading = false
                         self.isStreaming = false
                         self.isCached = false
+                        // Schedule feature discovery nudge if user hasn't tried chat yet
+                        NotificationManager.shared.scheduleCharacterChatDiscovery(bookTitle: book.title)
 
-                        // Fire Vani pre-warm with FULL summary text.
-                        // Streaming is done so TTS gets the complete text.
-                        // Vani pre-warm is user-triggered — tap the idle bar to start
+                        // Guest mode: increment local guest usage cache
+                        if GuestManager.shared.isGuestMode {
+                            GuestManager.shared.increment(type: "summary")
+                        }
 
-                        // Show nudge toast when user has 1 or 2 free summaries remaining
                         // Update quota state for counter display
+                        // Also reflects top-up credits into StoreManager
+                        // so PaywallView shows accurate remaining counts.
                         if let quota = event.quota,
-                        let isPro = quota["isPro"] as? Bool,
-                            !isPro {
-                                    let used = quota["used"] as? Int
-                                    let limit = quota["limit"] as? Int
-                                    let remaining = quota["remaining"] as? Int ?? 5
-                                    self.quotaUsed = used
-                                    self.quotaLimit = limit
-                                        if remaining <= 2 {
-                                                        self.showQuotaNudge = true
-                                                    }
-                                                }
+                           let isPro = quota["isPro"] as? Bool,
+                           !isPro {
+                            let used      = quota["used"]         as? Int
+                            let limit     = quota["limit"]        as? Int
+                            let remaining = quota["remaining"]    as? Int ?? 5
+                            let topup     = quota["topupCredits"] as? Int ?? 0
+                            self.quotaUsed  = used
+                            self.quotaLimit = limit
+                            // Keep UsageManager in sync — drives quota warning banner
+                            if let used = used, let limit = limit {
+                                UsageManager.shared.update(used: used, limit: limit)
+                            }
+                            // Push top-up summary credit count into StoreManager
+                            // so PaywallView reflects the live value if it opens next.
+                            StoreManager.shared.topupSummaryCredits = topup
+                            if remaining <= 2 {
+                                self.showQuotaNudge = true
+                            }
+                        }
                         
                         // ✅ ANALYTICS: Track success
                         let generationTime = Date().timeIntervalSince(startTime)
@@ -344,7 +358,6 @@ class SummaryViewModel: ObservableObject {
                         )
                         
                         print("✅ Summary streaming complete!")
-                      
                         
                     default:
                         break
@@ -358,26 +371,18 @@ class SummaryViewModel: ObservableObject {
     private func animateCachedSummary(_ summary: BookSummary, chapter: Int = 0) async {
         isCached = true
         
-        // Split into words
         let words = summary.content.split(separator: " ")
         var currentText = ""
         
-        // Animate word-by-word (faster than real streaming)
         for word in words {
             currentText += word + " "
             streamingText = currentText
-            
-            // Fast animation (20ms per word)
             try? await Task.sleep(nanoseconds: 20_000_000)
         }
         
-        // Set final summary
         self.summary = summary
         self.isLoading = false
         self.isStreaming = false
-
-        // Vani pre-warm with full cached summary text
-        // Vani pre-warm is user-triggered — tap the idle bar to start
     }
 
     // MARK: - Cache Management
@@ -394,8 +399,6 @@ class SummaryViewModel: ObservableObject {
     private func saveSummaryToCache(_ summary: BookSummary, chapter: Int) {
         summaryRepository.saveSummary(summary)
     }
-    
-        
 }
 
 // ✅ STREAM EVENT MODEL
@@ -405,6 +408,13 @@ struct StreamEvent: Codable {
     let summary: String?
     let quota: [String: Any]?
 
+    // Memberwise init for direct construction from JSONSerialization
+        init(type: String, content: String?, summary: String?, quota: [String: Any]?) {
+            self.type = type
+            self.content = content
+            self.summary = summary
+            self.quota = quota
+        }
     enum CodingKeys: String, CodingKey {
         case type, content, summary, quota
     }
@@ -414,13 +424,7 @@ struct StreamEvent: Codable {
         type = try container.decode(String.self, forKey: .type)
         content = try container.decodeIfPresent(String.self, forKey: .content)
         summary = try container.decodeIfPresent(String.self, forKey: .summary)
-        // Decode quota as raw JSON since it contains mixed types
-        if let quotaData = try? container.decodeIfPresent(Data.self, forKey: .quota),
-           let dict = try? JSONSerialization.jsonObject(with: quotaData) as? [String: Any] {
-            quota = dict
-        } else {
-            quota = nil
-        }
+        quota = nil // always use memberwise init path for quota
     }
 
     func encode(to encoder: Encoder) throws {

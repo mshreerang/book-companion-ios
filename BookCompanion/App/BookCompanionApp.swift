@@ -12,15 +12,19 @@ import RevenueCat
 @main
 struct BookCompanionApp: App {
     
+    // ── ADDITION 1: AppDelegate adaptor for APNs token bridge ────────────────
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
+
     private let container = AppContainer()
     @StateObject private var authManager = AuthManager.shared
     @StateObject private var storeManager = StoreManager.shared
+    @StateObject private var guestManager = GuestManager.shared
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
-    @AppStorage("hasSeenTransparencyScreen") private var hasSeenTransparencyScreen = false
-    @State private var showTransparency = false
     @StateObject private var bookManager = BookManager()
     @StateObject private var deepLinkManager = DeepLinkManager()
+    @StateObject private var usageManager = UsageManager.shared
     @Environment(\.scenePhase) private var scenePhase
+    
     
     init() {
         // 0. Analytics first
@@ -66,6 +70,18 @@ struct BookCompanionApp: App {
                     OnboardingView {
                         hasCompletedOnboarding = true
                     }
+                } else if guestManager.isGuestMode {
+                    // ── Guest mode — no account, limited quota ────────────
+                    NavigationStack {
+                        BookSearchView(
+                            viewModel: container.makeBookSearchViewModel(),
+                            settingsManager: container.settingsManager,
+                            bookManager: container.bookManager,
+                            makeProgressViewModel: container.makeProgressInputViewModel,
+                            makeSummaryViewModel: container.makeSummaryViewModel,
+                            makeCharactersViewModel: container.makeCharactersViewModel
+                        )
+                    }
                 } else if !authManager.isSignedIn {
                     SignInView(authManager: authManager)
                 } else {
@@ -82,34 +98,71 @@ struct BookCompanionApp: App {
                     .task {
                         await container.bookManager.syncFromCloud()
                     }
-                    // Show transparency screen once after first sign-in
-                    .fullScreenCover(isPresented: $showTransparency) {
-                        TransparencyOnboardingView {
-                            hasSeenTransparencyScreen = true
-                            showTransparency = false
-                        }
-                    }
-                    .onAppear {
-                        if !hasSeenTransparencyScreen {
-                            // Small delay so main UI renders first
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                                showTransparency = true
-                            }
-                        }
-                    }
                 }
             }
             .environmentObject(authManager)
             .environmentObject(storeManager)
+            .environmentObject(guestManager)
             .environmentObject(deepLinkManager)
+            .environmentObject(usageManager)
             .onChange(of: scenePhase) { _, newPhase in
                 if newPhase == .active {
                     Task { await StoreManager.shared.syncEntitlement() }
+                    NotificationManager.shared.clearBadge()
+                }
+            }
+            // When user signs in from guest mode, link device → userId
+            .onChange(of: authManager.isSignedIn) { _, signedIn in
+                if signedIn, let userId = authManager.userId {
+                    GuestManager.shared.linkDevice(userId: userId)
+                }
+                // ── ADDITION 2: Request push permission on sign-in ───────
+                if signedIn {
+                    NotificationManager.shared.requestPermission()
+                }
+                if signedIn {
+                    UsageManager.shared.refresh()
                 }
             }
             .onOpenURL { url in
                 deepLinkManager.handle(url: url)
             }
+            // ── ADDITION 3: Receive APNs token from AppDelegate bridge ───
+            .onReceive(NotificationCenter.default.publisher(
+                for: Notification.Name("APNSTokenReceived")
+            )) { notification in
+                if let tokenData = notification.object as? Data {
+                    NotificationManager.shared.registerToken(tokenData)
+                }
+            }
         }
+    }
+}
+
+// MARK: - AppDelegate (APNs token bridge)
+//
+// SwiftUI apps have no AppDelegate by default, but APNs requires
+// didRegisterForRemoteNotificationsWithDeviceToken to receive the token.
+// We bridge it to NotificationCenter so BookCompanionApp can receive it
+// without coupling AppDelegate directly to NotificationManager.
+
+class AppDelegate: NSObject, UIApplicationDelegate {
+
+    func application(
+        _ application: UIApplication,
+        didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
+    ) {
+        NotificationCenter.default.post(
+            name: Notification.Name("APNSTokenReceived"),
+            object: deviceToken
+        )
+    }
+
+    func application(
+        _ application: UIApplication,
+        didFailToRegisterForRemoteNotificationsWithError error: Error
+    ) {
+        // Non-fatal — app works without push notifications
+        print("⚠️ APNs registration failed: \(error)")
     }
 }

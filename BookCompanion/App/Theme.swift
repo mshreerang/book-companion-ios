@@ -3,8 +3,8 @@
 //  BookCompanion
 //
 //  Created by Shree on 08/02/2026.
-//  Updated: brand palette changed from blue/purple to indigo/teal
-//           to distinguish from AI-generated app defaults.
+//  Updated: brand palette — Modern Hardback (Library Bindery + Dried Terracotta)
+//           No gradient — flat solid primary, terracotta as accent only.
 //
 
 import SwiftUI
@@ -44,38 +44,42 @@ enum Theme {
     enum Colors {
 
         // ── Brand palette ──────────────────────────────────────────────
-        // Indigo → Teal: literary, calm, premium.
-        // Chosen to stand apart from the ubiquitous AI blue/purple default
-        // (Tailwind's bg-indigo-500 that all LLM-generated UIs default to).
+        // Modern Hardback: Library Bindery (deep forest green) + Dried Terracotta.
+        // Literary, calm, warm. No gradient — flat solid primary only.
+        // Terracotta used as accent on secondary elements only (badges, tab
+        // underlines, checkmarks, Vani player) — never as a gradient partner.
 
-        static let primary   = Color(red: 0.29, green: 0.33, blue: 0.73)  // indigo
-        static let secondary = Color(red: 0.18, green: 0.64, blue: 0.60)  // teal
+        static let primary   = Color(red: 0.208, green: 0.275, blue: 0.239)  // #35463D library bindery
+        static let secondary = Color(red: 0.651, green: 0.482, blue: 0.357)  // #A67B5B dried terracotta
 
-        // Gradient colours
-        static let gradientStart = Color(red: 0.29, green: 0.33, blue: 0.73) // indigo
-        static let gradientEnd   = Color(red: 0.18, green: 0.64, blue: 0.60) // teal
+        // Gradient colours — both set to primary so brandGradient renders flat.
+        // Do NOT set gradientEnd to secondary — they don't gradient well together.
+        static let gradientStart = Color(red: 0.208, green: 0.275, blue: 0.239) // #35463D
+        static let gradientEnd   = Color(red: 0.208, green: 0.275, blue: 0.239) // #35463D (flat, intentional)
 
-        /// Standard horizontal button/icon gradient (leading → trailing)
+        /// Standard horizontal button gradient — renders as flat forest green.
+        /// Both stops are identical so there is no visible gradient transition.
         static var brandGradient: LinearGradient {
             LinearGradient(
-                colors: [gradientStart, gradientEnd],
+                colors: [gradientStart, gradientStart],
                 startPoint: .leading,
                 endPoint: .trailing
             )
         }
 
         /// Diagonal variant for large hero areas (onboarding icons, etc.)
+        /// Also flat — consistent with the no-gradient design direction.
         static var brandGradientDiagonal: LinearGradient {
             LinearGradient(
-                colors: [gradientStart, gradientEnd],
+                colors: [gradientStart, gradientStart],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
         }
 
         // ── Mode colours ───────────────────────────────────────────────
-        static let aiMode      = Color(red: 0.29, green: 0.33, blue: 0.73) // indigo
-        static let offlineMode = Color(red: 0.18, green: 0.64, blue: 0.60) // teal
+        static let aiMode      = Color(red: 0.208, green: 0.275, blue: 0.239) // library bindery
+        static let offlineMode = Color(red: 0.651, green: 0.482, blue: 0.357) // dried terracotta
 
         // ── Status colours ─────────────────────────────────────────────
         static let success = Color.green
@@ -86,11 +90,12 @@ enum Theme {
         static let textPrimary         = Color.primary
         static let textSecondary       = Color.secondary
         static let background          = Color(UIColor.systemBackground)
+        static let pagedBackground     = Color(red: 0.949, green: 0.941, blue: 0.914) // #F2F0E9 linen cream
         static let secondaryBackground = Color(UIColor.secondarySystemBackground)
 
         // ── Shadow tint ────────────────────────────────────────────────
-        // Use this instead of .blue.opacity(0.3) for brand-consistent shadows.
-        static let brandShadow = Color(red: 0.29, green: 0.33, blue: 0.73).opacity(0.28)
+        // Softer than before — forest green shadow is subtle and warm.
+        static let brandShadow = Color(red: 0.208, green: 0.275, blue: 0.239).opacity(0.18)
     }
 
     // MARK: - Typography
@@ -112,21 +117,21 @@ enum Theme {
     // MARK: - Shadows
 
     enum Shadow {
-        static let sm = (color: Color.black.opacity(0.08),  radius: CGFloat(4),  x: CGFloat(0), y: CGFloat(2))
-        static let md = (color: Color.black.opacity(0.12),  radius: CGFloat(8),  x: CGFloat(0), y: CGFloat(4))
-        static let lg = (color: Color.black.opacity(0.16),  radius: CGFloat(12), x: CGFloat(0), y: CGFloat(6))
-        static let brand = (color: Theme.Colors.brandShadow, radius: CGFloat(10), x: CGFloat(0), y: CGFloat(5))
+        static let sm    = (color: Color.black.opacity(0.08),  radius: CGFloat(4),  x: CGFloat(0), y: CGFloat(2))
+        static let md    = (color: Color.black.opacity(0.12),  radius: CGFloat(8),  x: CGFloat(0), y: CGFloat(4))
+        static let lg    = (color: Color.black.opacity(0.16),  radius: CGFloat(12), x: CGFloat(0), y: CGFloat(6))
+        static let brand = (color: Theme.Colors.brandShadow,   radius: CGFloat(10), x: CGFloat(0), y: CGFloat(5))
     }
 
     // MARK: - Icons
 
     enum Icons {
         // App features
-        static let book      = "book.closed.fill"
-        static let bookPages = "book.pages"
+        static let book       = "book.closed.fill"
+        static let bookPages  = "book.pages"
         static let characters = "person.2.fill"
-        static let listen    = "speaker.wave.2.fill"
-        static let stop      = "stop.fill"
+        static let listen     = "speaker.wave.2.fill"
+        static let stop       = "stop.fill"
 
         // Modes
         static let aiMode      = "sparkles"
@@ -145,8 +150,8 @@ enum Theme {
         static let loading = "hourglass"
 
         // Navigation
-        static let back    = "chevron.left"
-        static let forward = "chevron.right"
+        static let back     = "chevron.left"
+        static let forward  = "chevron.right"
         static let external = "arrow.up.forward"
     }
 
@@ -170,12 +175,13 @@ enum Theme {
 
 extension View {
 
-    /// Applies the standard brand gradient as a foreground style.
+    /// Applies the brand primary colour as a flat foreground style.
+    /// Named brandGradient for API compatibility — renders as solid forest green.
     func brandGradient() -> some View {
         self.foregroundStyle(Theme.Colors.brandGradient)
     }
 
-    /// Applies the diagonal brand gradient (for large hero icons).
+    /// Diagonal variant — also flat. Named for API compatibility.
     func brandGradientDiagonal() -> some View {
         self.foregroundStyle(Theme.Colors.brandGradientDiagonal)
     }
@@ -204,7 +210,8 @@ extension View {
 }
 
 // MARK: - Brand Gradient Button Style
-// Convenience: apply to any Button to get the full indigo→teal pill treatment.
+// Full-width pill button in solid library bindery green.
+// Named BrandGradientButtonStyle for API compatibility — no gradient applied.
 
 struct BrandGradientButtonStyle: ButtonStyle {
     var isEnabled: Bool = true
@@ -220,8 +227,11 @@ struct BrandGradientButtonStyle: ButtonStyle {
                     if isEnabled {
                         Theme.Colors.brandGradient
                     } else {
-                        LinearGradient(colors: [.gray, .gray],
-                                       startPoint: .leading, endPoint: .trailing)
+                        LinearGradient(
+                            colors: [.gray, .gray],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
                     }
                 }
             )

@@ -43,7 +43,10 @@ class AuthManager: NSObject, ObservableObject {
            let userId = KeychainManager.shared.getUserId() {
             self.userId = userId
             self.isSignedIn = true
-            Task { await validateToken(token) }
+            Task {
+                await validateToken(token)
+                await refreshTokenIfNeeded(token)
+            }
         }
     }
     
@@ -381,6 +384,62 @@ class AuthManager: NSObject, ObservableObject {
         }
     }
     
+    // MARK: - Token Refresh
+    
+    /// Silently refreshes the JWT if it expires within 7 days.
+    /// Called on every app launch after validateToken succeeds.
+    /// If refresh fails, the user continues with their existing token
+    /// until it actually expires — no disruption.
+    private func refreshTokenIfNeeded(_ token: String) async {
+        // Decode the JWT payload to check expiry (JWT is base64 — no verification needed client-side)
+        let parts = token.split(separator: ".")
+        guard parts.count == 3,
+              let payloadData = Data(base64URLEncoded: String(parts[1])),
+              let payload = try? JSONSerialization.jsonObject(with: payloadData) as? [String: Any],
+              let exp = payload["exp"] as? TimeInterval else {
+            return
+        }
+        
+        let expiryDate = Date(timeIntervalSince1970: exp)
+        let daysRemaining = expiryDate.timeIntervalSinceNow / (24 * 60 * 60)
+        
+        // Only refresh if expiring within 7 days
+        guard daysRemaining < 7 else {
+            print("ℹ️ Token has \(Int(daysRemaining)) days remaining — no refresh needed")
+            return
+        }
+        
+        print("⚠️ Token expires in \(Int(daysRemaining)) days — refreshing...")
+        
+        do {
+            let url = URL(string: "\(Config.apiEndpoint)/api/auth/refresh")!
+            var request = URLRequest(url: url)
+            request.httpMethod = "POST"
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            
+            let (data, response) = try await URLSession.shared.data(for: request)
+            
+            guard let httpResponse = response as? HTTPURLResponse else { return }
+            
+            if httpResponse.statusCode == 200 {
+                let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+                if let newToken = json?["token"] as? String {
+                    KeychainManager.shared.saveUserToken(newToken)
+                    print("✅ Token refreshed — new 30-day expiry")
+                }
+            } else if httpResponse.statusCode == 401 {
+                // Token is invalid or user was deleted — sign out
+                print("⚠️ Token refresh returned 401 — signing out")
+                signOut()
+            }
+            // Any other status code: do nothing, keep existing token
+        } catch {
+            // Network error — don't disrupt the user, they still have a valid token
+            print("⚠️ Token refresh network error (non-fatal): \(error)")
+        }
+    }
+    
     // MARK: - Helpers
     
     private func formatName(_ name: PersonNameComponents?) -> String {
@@ -414,8 +473,16 @@ extension AuthManager: ASAuthorizationControllerDelegate {
     }
     
     func authorizationController(controller: ASAuthorizationController, didCompleteWithError error: Error) {
-        self.error = error.localizedDescription
         self.isLoading = false
+
+        // Error 1001 = user cancelled the Apple Sign In sheet — not an error, ignore silently
+        let nsError = error as NSError
+        if nsError.domain == ASAuthorizationError.errorDomain && nsError.code == ASAuthorizationError.canceled.rawValue {
+            print("ℹ️ Sign in with Apple cancelled by user")
+            return
+        }
+
+        self.error = "Sign in with Apple failed. Please try again."
         AnalyticsManager.shared.track(event: "sign_in_failed", properties: ["method": "apple", "error": error.localizedDescription])
         print("❌ Sign in with Apple failed: \(error)")
     }
@@ -444,5 +511,23 @@ enum AuthError: LocalizedError {
         case .invalidResponse: return "Invalid response from server"
         case .serverError(let message): return message
         }
+    }
+}
+
+// MARK: - Base64URL Decoding (for JWT payload parsing)
+
+private extension Data {
+    /// Decodes a base64URL-encoded string (used in JWT tokens).
+    /// Standard base64 uses `+/` and `=` padding; JWT uses `-_` and no padding.
+    init?(base64URLEncoded string: String) {
+        var base64 = string
+            .replacingOccurrences(of: "-", with: "+")
+            .replacingOccurrences(of: "_", with: "/")
+        // Add padding if needed
+        let remainder = base64.count % 4
+        if remainder > 0 {
+            base64 += String(repeating: "=", count: 4 - remainder)
+        }
+        self.init(base64Encoded: base64)
     }
 }

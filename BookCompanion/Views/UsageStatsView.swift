@@ -27,7 +27,6 @@ struct UsageStatsView: View {
                             ProgressView()
                                 .scaleEffect(0.8)
                         } else {
-                            // Pro users see "7 / 200 per month", free users see "2 / 5"
                             Text(viewModel.isPro
                                  ? "\(viewModel.summariesUsed) / \(viewModel.summariesLimit) per month"
                                  : "\(viewModel.summariesUsed) / \(viewModel.summariesLimit)")
@@ -37,19 +36,11 @@ struct UsageStatsView: View {
                     
                     Spacer()
                     
-                    // Progress circle — only meaningful for free users
                     if !viewModel.isLoading {
                         if viewModel.isPro {
-                            // Pro: show sparkle instead of progress ring
                             Image(systemName: "infinity")
                                 .font(.system(size: 28, weight: .medium))
-                                .foregroundStyle(
-                                    LinearGradient(
-                                        colors: [.blue, .purple],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    )
-                                )
+                                .foregroundStyle(Theme.Colors.brandGradient)
                                 .frame(width: 60, height: 60)
                         } else {
                             ZStack {
@@ -60,7 +51,9 @@ struct UsageStatsView: View {
                                 Circle()
                                     .trim(from: 0, to: viewModel.usageProgress)
                                     .stroke(
-                                        viewModel.isNearLimit ? Color.orange : Color.blue,
+                                        viewModel.isNearLimit
+                                            ? Theme.Colors.secondary
+                                            : Theme.Colors.primary,
                                         style: StrokeStyle(lineWidth: 8, lineCap: .round)
                                     )
                                     .frame(width: 60, height: 60)
@@ -69,18 +62,19 @@ struct UsageStatsView: View {
                                 
                                 Text("\(Int(viewModel.usageProgress * 100))%")
                                     .font(.caption.bold())
-                                    .foregroundColor(viewModel.isNearLimit ? .orange : .blue)
+                                    .foregroundColor(viewModel.isNearLimit
+                                                     ? Theme.Colors.secondary
+                                                     : Theme.Colors.primary)
                             }
                         }
                     }
                 }
                 .padding(.vertical, 8)
                 
-                // Remaining
                 if !viewModel.isLoading {
                     HStack {
                         Image(systemName: "sparkles")
-                            .foregroundColor(.green)
+                            .foregroundColor(Theme.Colors.primary)
                         Text(viewModel.isPro
                              ? "\(viewModel.summariesRemaining) summaries remaining this month"
                              : "\(viewModel.summariesRemaining) summaries remaining this month")
@@ -101,6 +95,32 @@ struct UsageStatsView: View {
                     }
                 }
             }
+
+            // TOP-UP CREDITS — shown only for free users who have credits
+            if !viewModel.isPro && viewModel.hasTopupCredits {
+                Section {
+                    topupCreditRow(
+                        icon: "text.book.closed.fill",
+                        label: "Summary Credits",
+                        count: viewModel.topupSummaryCredits
+                    )
+                    topupCreditRow(
+                        icon: "sparkles",
+                        label: "Character Analysis Credits",
+                        count: viewModel.topupCharacterCredits
+                    )
+                    topupCreditRow(
+                        icon: "bubble.left.and.bubble.right.fill",
+                        label: "Chat Message Credits",
+                        count: viewModel.topupChatCredits
+                    )
+                } header: {
+                    Text("Top-Up Credits")
+                } footer: {
+                    Text("These never expire and are used after your monthly allowance runs out.")
+                        .foregroundColor(.secondary)
+                }
+            }
             
             // SUBSCRIPTION TIER
             Section {
@@ -117,7 +137,7 @@ struct UsageStatsView: View {
                         Button("Upgrade") {
                             showPaywall = true
                         }
-                        .foregroundStyle(.blue)
+                        .foregroundStyle(Theme.Colors.primary)
                     }
                 }
             } header: {
@@ -168,6 +188,20 @@ struct UsageStatsView: View {
             PaywallView()
         }
     }
+
+    private func topupCreditRow(icon: String, label: String, count: Int) -> some View {
+        HStack {
+            Image(systemName: icon)
+                .foregroundStyle(Theme.Colors.primary)
+                .frame(width: 24)
+            Text(label)
+                .font(.subheadline)
+            Spacer()
+            Text("\(count)")
+                .font(.subheadline.bold())
+                .foregroundStyle(count > 0 ? Theme.Colors.secondary : Color.secondary)
+        }
+    }
 }
 
 // ============================================
@@ -183,6 +217,14 @@ class UsageStatsViewModel: ObservableObject {
     @Published var isPro = false
     @Published var isLoading = false
     @Published var error: String?
+
+    @Published var topupSummaryCredits:   Int = 0
+    @Published var topupCharacterCredits: Int = 0
+    @Published var topupChatCredits:      Int = 0
+
+    var hasTopupCredits: Bool {
+        topupSummaryCredits > 0 || topupCharacterCredits > 0 || topupChatCredits > 0
+    }
     
     var summariesRemaining: Int {
         max(0, summariesLimit - summariesUsed)
@@ -236,10 +278,19 @@ class UsageStatsViewModel: ObservableObject {
             
             let stats = try JSONDecoder().decode(UsageStats.self, from: data)
             
-            self.summariesUsed = stats.summaries_generated
-            self.summariesLimit = stats.summaries_limit
-            self.currentPeriod = stats.period
-            self.isPro = stats.tier == "pro"
+            self.summariesUsed   = stats.summaries_generated
+            self.summariesLimit  = stats.summaries_limit
+            self.currentPeriod   = stats.period
+            self.isPro           = stats.tier == "pro"
+
+            self.topupSummaryCredits   = stats.topup_summary_credits   ?? 0
+            self.topupCharacterCredits = stats.topup_character_credits ?? 0
+            self.topupChatCredits      = stats.topup_chat_credits      ?? 0
+
+            StoreManager.shared.topupSummaryCredits   = self.topupSummaryCredits
+            StoreManager.shared.topupCharacterCredits = self.topupCharacterCredits
+            StoreManager.shared.topupChatCredits      = self.topupChatCredits
+
             self.isLoading = false
             
         } catch {
@@ -259,6 +310,9 @@ struct UsageStats: Codable {
     let summaries_limit: Int
     let period: String
     let tier: String
+    let topup_summary_credits:   Int?
+    let topup_character_credits: Int?
+    let topup_chat_credits:      Int?
 }
 
 enum UsageError: LocalizedError {

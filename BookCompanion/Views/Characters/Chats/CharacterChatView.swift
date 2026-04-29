@@ -119,6 +119,7 @@ struct CharacterChatView: View {
         }
         .onAppear {
             if !hasSeenChatDisclaimer { showDisclaimer = true }
+                NotificationManager.shared.cancelCharacterChatDiscovery()
         }
         .fullScreenCover(isPresented: $showDisclaimer) {
             CharacterChatDisclaimerView {
@@ -127,8 +128,20 @@ struct CharacterChatView: View {
             }
         }
         .sheet(isPresented: $showPaywall) {
-            PaywallView(triggerReason: "Upgrade to Pro for unlimited character chats.")
-                .environmentObject(StoreManager.shared)
+            if GuestManager.shared.isGuestMode {
+                GuestLimitView(
+                    featureType: .chat,
+                    onCreateAccount: {
+                        showPaywall = false
+                        GuestManager.shared.exitGuestMode()
+                        dismiss()
+                    },
+                    onDismiss: { showPaywall = false }
+                )
+            } else {
+                PaywallView(triggerReason: "Upgrade to Pro for unlimited character chats.")
+                    .environmentObject(StoreManager.shared)
+            }
         }
         .sheet(isPresented: $showReport) {
             ReportSheetView(characterName: character.fullName) { reason, detail in
@@ -285,7 +298,7 @@ struct QuotaCounterView: View {
 
             Spacer()
 
-            Button("Go Pro") { onUpgrade() }
+            Button(GuestManager.shared.isGuestMode ? "Create account" : "Go Pro") { onUpgrade() }
                 .font(.caption2.bold())
                 .foregroundColor(Theme.Colors.primary)
         }

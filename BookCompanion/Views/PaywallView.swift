@@ -2,11 +2,12 @@
 //  PaywallView.swift
 //  BookCompanion
 //
-//  Created by Shree on 28/02/2026.
-//  Updated: removed stale "(March)" date from Character Chat feature,
-//           replaced hardcoded blue/purple/green/orange/teal icon colours
-//           with Theme brand colours, CTA gradient uses Theme.
-//           Fixed legal doc URLs to use vivanlabs.com domain.
+//  Updated v1.3 — Option A paywall with top-up first, Pro second.
+//  Top-up: 5 summaries + 5 character analyses + 10 chat messages — £0.99
+//  Credits never expire and never reset on the 1st of the month.
+//
+//  Credit counts are read directly from StoreManager (fetched live when
+//  the view appears) — no need to pass them via init parameters.
 //
 
 import SwiftUI
@@ -19,8 +20,9 @@ struct PaywallView: View {
     let triggerReason: String
 
     @State private var selectedPlan: PlanType = .annual
-    @State private var isLoading = true
-    @State private var showSuccess = false
+    @State private var isLoadingOfferings = true
+    @State private var showTopupSuccess = false
+    @State private var showProSuccess = false
 
     enum PlanType { case monthly, annual }
 
@@ -34,10 +36,9 @@ struct PaywallView: View {
                 VStack(spacing: 0) {
                     headerSection
                     Divider().padding(.vertical, 8)
-                    featuresSection
-                    Divider().padding(.vertical, 8)
-                    pricingToggle
-                    ctaSection
+                    topupSection
+                    dividerOr
+                    proSection
                     legalFooter
                 }
                 .padding(.bottom, 32)
@@ -53,12 +54,22 @@ struct PaywallView: View {
                     }
                 }
             }
-            .task { await loadOfferings() }
+            .task {
+                await store.loadOfferings()
+                await store.loadTopupProduct()
+                await store.fetchTopupCredits()
+                isLoadingOfferings = false
+            }
             .overlay {
-                if showSuccess {
+                if showTopupSuccess {
+                    TopupSuccessOverlay()
+                        .transition(.opacity)
+                        .animation(.easeIn(duration: 0.3), value: showTopupSuccess)
+                }
+                if showProSuccess {
                     ProSuccessOverlay(isFoundingMember: store.isFoundingMember)
                         .transition(.opacity)
-                        .animation(.easeIn(duration: 0.3), value: showSuccess)
+                        .animation(.easeIn(duration: 0.3), value: showProSuccess)
                 }
             }
         }
@@ -67,25 +78,20 @@ struct PaywallView: View {
     // MARK: - Header
 
     private var headerSection: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "crown.fill")
-                .font(.system(size: 52))
-                .foregroundStyle(
-                    LinearGradient(
-                        colors: [.yellow, .orange],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-                .shadow(color: .orange.opacity(0.4), radius: 8)
+        VStack(spacing: 8) {
+            Image(systemName: "lock.fill")
+                .font(.system(size: 40))
+                .foregroundStyle(Theme.Colors.brandGradient)
                 .padding(.top, 24)
 
-            Text("BookCompanion Pro")
-                .font(.title.bold())
-
             Text(triggerReason.isEmpty
-                 ? "Unlimited reading insights, powered by AI"
+                 ? "You've used all your credits"
                  : triggerReason)
+                .font(.title3.bold())
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 24)
+
+            Text("Your next summary is waiting. Unlock it now.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
@@ -94,54 +100,155 @@ struct PaywallView: View {
         .padding(.bottom, 16)
     }
 
-    // MARK: - Features
-    //
-    // All feature icon colours now use Theme brand colours for consistency.
-    // The crown/gold colours are intentionally kept for the header — those
-    // encode "premium" semantically. Feature row icons use brand indigo/teal.
+    // MARK: - Top-Up Section (shown first — primary CTA)
 
-    private var featuresSection: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            PaywallFeatureRow(
-                icon: "infinity",
-                color: Theme.Colors.primary,
-                text: "Unlimited Summaries",
-                sub: "Any chapter, any book, anytime"
+    private var topupSection: some View {
+        VStack(spacing: 12) {
+            // What you get
+            VStack(spacing: 0) {
+                topupRow(icon: "text.book.closed.fill",
+                         color: Theme.Colors.primary,
+                         label: "5 Summaries",
+                         creditsRemaining: store.topupSummaryCredits)
+                Divider().padding(.leading, 44)
+                topupRow(icon: "sparkles",
+                         color: Theme.Colors.secondary,
+                         label: "5 Character Analyses",
+                         creditsRemaining: store.topupCharacterCredits)
+                Divider().padding(.leading, 44)
+                topupRow(icon: "bubble.left.and.bubble.right.fill",
+                         color: Theme.Colors.primary,
+                         label: "10 Chat Messages",
+                         creditsRemaining: store.topupChatCredits)
+            }
+            .background(Color(.systemBackground))
+            .cornerRadius(Theme.CornerRadius.lg)
+            .overlay(
+                RoundedRectangle(cornerRadius: Theme.CornerRadius.lg)
+                    .stroke(Color(.systemGray5), lineWidth: 0.5)
             )
-            PaywallFeatureRow(
-                icon: "sparkles",
-                color: Theme.Colors.secondary,
-                text: "Unlimited Character Analysis",
-                sub: "Deep dive into every character"
-            )
-            PaywallFeatureRow(
-                icon: "bubble.left.and.bubble.right.fill",
-                color: Theme.Colors.primary,
-                text: "Chat with Characters",
-                sub: "Chat with characters — spoiler-safe"
-            )
-            PaywallFeatureRow(
-                icon: "square.and.arrow.up",
-                color: Theme.Colors.secondary,
-                text: "Export & Share",
-                sub: "Save your reading insights"
-            )
-            PaywallFeatureRow(
-                icon: "person.3.fill",
-                color: Theme.Colors.primary,
-                text: "Family Sharing Included",
-                sub: "Share with up to 5 family members"
-            )
+            .padding(.horizontal, 24)
+
+            // Credits never expire note
+            Label("Credits never expire — use them any time", systemImage: "infinity")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            // Top-up CTA button
+            Button {
+                Task { await handleTopupPurchase() }
+            } label: {
+                Group {
+                    if store.isTopupPurchasing {
+                        ProgressView().tint(.white)
+                    } else {
+                        HStack {
+                            Text("Get More Credits")
+                                .font(.system(size: 17, weight: .semibold))
+                            Spacer()
+                            Text(topupPriceLabel)
+                                .font(.system(size: 17, weight: .bold))
+                        }
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 20)
+                    }
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 16)
+                .background(Theme.Colors.brandGradient)
+                .cornerRadius(Theme.CornerRadius.xl)
+            }
+            .disabled(store.isTopupPurchasing || store.topupProduct == nil)
+            .shadow(color: Theme.Colors.brandShadow, radius: 10, x: 0, y: 5)
+            .padding(.horizontal, 24)
+
+            if let err = store.purchaseError {
+                Text(err)
+                    .font(.caption)
+                    .foregroundStyle(.red)
+                    .padding(.horizontal, 24)
+            }
         }
-        .padding(.horizontal, 24)
-        .padding(.bottom, 16)
+        .padding(.vertical, 16)
     }
 
-    // MARK: - Pricing Toggle
+    private func topupRow(icon: String, color: Color, label: String, creditsRemaining: Int) -> some View {
+        HStack(spacing: 14) {
+            Image(systemName: icon)
+                .foregroundStyle(color)
+                .frame(width: 28)
+                .font(.body)
+            Text(label)
+                .font(.subheadline)
+            Spacer()
+            // Show current remaining credits if user already has some
+            if creditsRemaining > 0 {
+                Text("\(creditsRemaining) remaining")
+                    .font(.caption)
+                    .foregroundStyle(Theme.Colors.secondary)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(Theme.Colors.secondary.opacity(0.1))
+                    .cornerRadius(Theme.CornerRadius.xs)
+            } else {
+                Image(systemName: "plus.circle.fill")
+                    .foregroundStyle(color.opacity(0.6))
+                    .font(.body)
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+    }
 
-    private var pricingToggle: some View {
-        VStack(spacing: 8) {
-            if isLoading {
+    private var topupPriceLabel: String {
+        if let product = store.topupProduct {
+            return product.localizedPriceString
+        }
+        return "£0.99"
+    }
+
+    // MARK: - Divider with "or go unlimited"
+
+    private var dividerOr: some View {
+        HStack(spacing: 12) {
+            Rectangle()
+                .fill(Color(.systemGray4))
+                .frame(height: 0.5)
+            Text("or go unlimited")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize()
+            Rectangle()
+                .fill(Color(.systemGray4))
+                .frame(height: 0.5)
+        }
+        .padding(.horizontal, 24)
+        .padding(.vertical, 4)
+    }
+
+    // MARK: - Pro Section (secondary CTA)
+
+    private var proSection: some View {
+        VStack(spacing: 12) {
+            // Crown + title
+            HStack(spacing: 10) {
+                Image(systemName: "crown.fill")
+                    .font(.title3)
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [.yellow, .orange],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                Text("BookCompanion Pro")
+                    .font(.headline)
+                Spacer()
+            }
+            .padding(.horizontal, 24)
+
+            // Plan toggle
+            if isLoadingOfferings {
                 ProgressView().frame(height: 52)
             } else {
                 HStack(spacing: 0) {
@@ -152,11 +259,108 @@ struct PaywallView: View {
                 .cornerRadius(Theme.CornerRadius.lg)
                 .padding(.horizontal, 24)
             }
+
+            // Pro features — compact
+            VStack(alignment: .leading, spacing: 8) {
+                proFeatureRow("Unlimited summaries, characters & chat")
+                proFeatureRow("Credits never run out again")
+                proFeatureRow("Family Sharing included")
+            }
+            .padding(.horizontal, 24)
+
+            // Pro CTA
+            Button {
+                Task { await handleProPurchase() }
+            } label: {
+                Group {
+                    if store.isPurchasing {
+                        ProgressView().tint(Theme.Colors.primary)
+                    } else {
+                        Text(ctaButtonLabel)
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(Theme.Colors.primary)
+                            .multilineTextAlignment(.center)
+                            .lineLimit(2)
+                            .minimumScaleFactor(0.85)
+                    }
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .padding(.horizontal, 12)
+                .background(Color(.systemBackground))
+                .cornerRadius(Theme.CornerRadius.xl)
+                .overlay(
+                    RoundedRectangle(cornerRadius: Theme.CornerRadius.xl)
+                        .stroke(Theme.Colors.primary, lineWidth: 1.5)
+                )
+            }
+            .disabled(store.isPurchasing || selectedPackage == nil)
+            .padding(.horizontal, 24)
+
+            // Restore
+            Button("Restore Purchases") {
+                Task {
+                    await store.restorePurchases()
+                    if store.isPro {
+                        withAnimation { showProSuccess = true }
+                        try? await Task.sleep(nanoseconds: 2_500_000_000)
+                        dismiss()
+                    } else {
+                        store.purchaseError = "No active subscription found."
+                    }
+                }
+            }
+            .font(.footnote)
+            .foregroundStyle(.secondary)
         }
-        .padding(.bottom, 16)
+        .padding(.vertical, 16)
     }
 
-    // MARK: - Pricing Labels
+    private func proFeatureRow(_ text: String) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: "checkmark.circle.fill")
+                .foregroundStyle(Theme.Colors.secondary)
+                .font(.footnote)
+            Text(text)
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+            Spacer()
+        }
+    }
+
+    // MARK: - Legal Footer
+
+    private var legalFooter: some View {
+        VStack(spacing: 10) {
+            if let subtitle = selectedPriceSubtitle {
+                Text(subtitle)
+                    .font(.caption)
+                    .foregroundStyle(.primary.opacity(0.75))
+                    .multilineTextAlignment(.center)
+                    .fontWeight(.medium)
+            }
+
+            Text("Payment charged to your Apple ID at confirmation. Subscription renews automatically unless cancelled at least 24 hours before the end of the current period. Manage subscriptions in App Store settings.")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+
+            HStack(spacing: 16) {
+                Link("Privacy Policy",
+                     destination: URL(string: "https://mshreerang.github.io/book-companion-docs/privacy-policy.html")!)
+                Text("·").foregroundStyle(.secondary)
+                Link("Terms of Use",
+                     destination: URL(string: "https://mshreerang.github.io/book-companion-docs/terms-of-use.html")!)
+            }
+            .font(.caption2)
+            .foregroundStyle(Theme.Colors.primary)
+        }
+        .padding(.horizontal, 24)
+        .padding(.top, 8)
+        .padding(.bottom, 8)
+    }
+
+    // MARK: - Pricing Helpers
 
     private var annualPackage:   Package? { store.offerings?.current?.annual }
     private var monthlyPackage:  Package? { store.offerings?.current?.monthly }
@@ -196,18 +400,18 @@ struct PaywallView: View {
     }
 
     private var ctaButtonLabel: String {
-        guard let pkg = selectedPackage else { return "Start Free Trial" }
+        guard let pkg = selectedPackage else { return "Subscribe to Pro" }
         let price  = pkg.storeProduct.localizedPriceString
         let period = selectedPlan == .annual ? "year" : "month"
         if let intro = pkg.storeProduct.introductoryDiscount {
             if intro.price == 0 {
                 let days = intro.subscriptionPeriod.value
-                return "Try Free for \(days) Days, then \(price)/\(period)"
+                return "Try Free for \(days) Days"
             } else {
                 if selectedPlan == .annual {
-                    return "Start 1 Year at \(intro.localizedPriceString), then \(price)/year"
+                    return "Start 1 Year at \(intro.localizedPriceString)"
                 } else {
-                    return "Start at \(intro.localizedPriceString)/mo, then \(price)/month"
+                    return "Start at \(intro.localizedPriceString)/mo"
                 }
             }
         }
@@ -243,141 +447,64 @@ struct PaywallView: View {
         }
     }
 
-    // MARK: - CTA
-
-    private var ctaSection: some View {
-        VStack(spacing: 8) {
-            Button {
-                Task { await handlePurchase() }
-            } label: {
-                Group {
-                    if store.isPurchasing {
-                        ProgressView().tint(.white)
-                    } else {
-                        Text(ctaButtonLabel)
-                            .font(.system(size: 17, weight: .semibold))
-                            .foregroundStyle(.white)
-                            .multilineTextAlignment(.center)
-                            .lineLimit(2)
-                            .minimumScaleFactor(0.85)
-                    }
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 16)
-                .padding(.horizontal, 12)
-                .background(Theme.Colors.brandGradient)
-                .cornerRadius(Theme.CornerRadius.xl)
-            }
-            .disabled(store.isPurchasing || selectedPackage == nil)
-            .shadow(color: Theme.Colors.brandShadow, radius: 10, x: 0, y: 5)
-            .padding(.horizontal, 24)
-
-            if let err = store.purchaseError {
-                Text(err)
-                    .font(.caption)
-                    .foregroundStyle(.red)
-                    .padding(.horizontal, 24)
-            }
-
-            Button("Restore Purchases") {
-                Task {
-                    await store.restorePurchases()
-                    // Check isPro directly after restore — don't trust the return value
-                    // since sandbox users may have had previous subscriptions
-                    if store.isPro {
-                        withAnimation { showSuccess = true }
-                        try? await Task.sleep(nanoseconds: 2_500_000_000)
-                        dismiss()
-                    } else {
-                        store.purchaseError = "No active subscription found to restore."
-                    }
-                }
-            }
-            .font(.footnote)
-            .foregroundStyle(.secondary)
-        }
-        .padding(.bottom, 16)
-    }
-
-    // MARK: - Legal Footer
-
-    private var legalFooter: some View {
-        VStack(spacing: 10) {
-            if let subtitle = selectedPriceSubtitle {
-                Text(subtitle)
-                    .font(.caption)
-                    .foregroundStyle(.primary.opacity(0.75))
-                    .multilineTextAlignment(.center)
-                    .fontWeight(.medium)
-            }
-
-            Text("Payment will be charged to your Apple ID account at the confirmation of purchase. Subscription automatically renews unless it is cancelled at least 24 hours before the end of the current period. You can manage and cancel your subscriptions by going to your App Store account settings after purchase.")
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-
-            HStack(spacing: 16) {
-                Link("Privacy Policy",
-                     destination: URL(string: "https://mshreerang.github.io/book-companion-docs/privacy-policy.html")!)
-                Text("·").foregroundStyle(.secondary)
-                Link("Terms of Use",
-                     destination: URL(string: "https://mshreerang.github.io/book-companion-docs/terms-of-use.html")!)
-            }
-            .font(.caption2)
-            .foregroundStyle(Theme.Colors.primary)
-        }
-        .padding(.horizontal, 24)
-        .padding(.bottom, 8)
-    }
-
     // MARK: - Actions
 
-    private func loadOfferings() async {
-        await store.loadOfferings()
-        isLoading = false
+    private func handleTopupPurchase() async {
+        let success = await store.purchaseTopup()
+        if success {
+            withAnimation { showTopupSuccess = true }
+            try? await Task.sleep(nanoseconds: 2_500_000_000)
+            showTopupSuccess = false
+            dismiss()
+        }
     }
 
-    private func handlePurchase() async {
+    private func handleProPurchase() async {
         guard let pkg = selectedPackage else { return }
         let success = await store.purchase(package: pkg)
         if success {
-            withAnimation { showSuccess = true }
+            withAnimation { showProSuccess = true }
             try? await Task.sleep(nanoseconds: 2_500_000_000)
             dismiss()
         }
     }
 }
 
-// MARK: - Feature Row
+// MARK: - Top-Up Success Overlay
 
-struct PaywallFeatureRow: View {
-    let icon: String
-    let color: Color
-    let text: String
-    let sub: String
-
+struct TopupSuccessOverlay: View {
     var body: some View {
-        HStack(spacing: 14) {
-            Image(systemName: icon)
-                .foregroundStyle(color)
-                .frame(width: 28)
-                .font(.title3)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(text)
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                Text(sub)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+        ZStack {
+            Color.black.opacity(0.65).ignoresSafeArea()
+            VStack(spacing: 20) {
+                Image(systemName: "plus.circle.fill")
+                    .font(.system(size: 72))
+                    .foregroundStyle(Theme.Colors.brandGradient)
+
+                VStack(spacing: 8) {
+                    Text("Credits Added!")
+                        .font(.title.bold())
+                        .foregroundStyle(.white)
+                    Text("5 summaries · 5 character analyses\n10 chat messages — ready to use.")
+                        .font(.subheadline)
+                        .foregroundStyle(.white.opacity(0.85))
+                        .multilineTextAlignment(.center)
+                }
+
+                Label("Never expire", systemImage: "infinity")
+                    .font(.footnote.bold())
+                    .foregroundStyle(Theme.Colors.secondary)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .background(Theme.Colors.secondary.opacity(0.15))
+                    .cornerRadius(20)
             }
-            Spacer()
-            Image(systemName: "checkmark.circle.fill")
-                .foregroundStyle(Theme.Colors.secondary)
+            .padding(40)
         }
     }
 }
 
-// MARK: - Pro Success Overlay
+// MARK: - Pro Success Overlay (unchanged)
 
 struct ProSuccessOverlay: View {
     let isFoundingMember: Bool
@@ -418,6 +545,35 @@ struct ProSuccessOverlay: View {
                 }
             }
             .padding(40)
+        }
+    }
+}
+
+// MARK: - Feature Row (kept for any other callers)
+
+struct PaywallFeatureRow: View {
+    let icon: String
+    let color: Color
+    let text: String
+    let sub: String
+
+    var body: some View {
+        HStack(spacing: 14) {
+            Image(systemName: icon)
+                .foregroundStyle(color)
+                .frame(width: 28)
+                .font(.title3)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(text)
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                Text(sub)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+            Image(systemName: "checkmark.circle.fill")
+                .foregroundStyle(Theme.Colors.secondary)
         }
     }
 }

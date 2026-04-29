@@ -173,6 +173,14 @@ final class ServerAISummaryGenerator: SummaryGenerator {
         request.httpMethod = "POST"
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
         request.addValue(appSecret, forHTTPHeaderField: "X-App-Secret")
+
+        // Auth: JWT for signed-in users, device hash for guests
+        if GuestManager.shared.isGuestMode {
+            request.addValue(GuestManager.shared.deviceHash, forHTTPHeaderField: "X-Device-Hash")
+        } else if let userToken = KeychainManager.shared.getUserToken() {
+            request.addValue("Bearer \(userToken)", forHTTPHeaderField: "Authorization")
+        }
+
         return request
     }
     

@@ -26,7 +26,6 @@ struct CharactersView: View {
     var body: some View {
         Group {
             if characters.isEmpty {
-                // ✅ IMPROVED: Beautiful empty state
                 EmptyCharactersView()
             } else if filteredCharacters.isEmpty {
                 ContentUnavailableView.search(text: searchText)
@@ -34,31 +33,26 @@ struct CharactersView: View {
                 List {
                     ForEach(filteredCharacters) { character in
                         HStack(alignment: .top, spacing: 16) {
-                            // Character Avatar
                             CharacterAvatar(name: character.name, size: 60)
                             
-                            // Character Info
                             VStack(alignment: .leading, spacing: 8) {
-                                // Name
                                 Text(character.name)
                                     .font(.headline)
                                 
-                                // Description
                                 Text(character.description)
                                     .font(.body)
                                     .foregroundColor(.secondary)
                                 
-                                // Relationships (if any)
                                 if let relationships = character.relationships,
                                    !relationships.isEmpty,
                                    relationships.lowercased() != "null" {
                                     HStack(spacing: 4) {
                                         Image(systemName: "person.2")
                                             .font(.caption)
-                                            .foregroundColor(.blue)
+                                            .foregroundColor(Theme.Colors.secondary)
                                         Text(relationships)
                                             .font(.caption)
-                                            .foregroundColor(.blue)
+                                            .foregroundColor(Theme.Colors.secondary)
                                     }
                                     .padding(.top, 4)
                                 }

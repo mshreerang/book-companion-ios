@@ -25,7 +25,6 @@ struct SettingsView: View {
     @State private var showDeleteAccountAlert = false
     @State private var isDeletingAccount = false
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = true
-    @AppStorage("hasSeenTransparencyScreen") private var hasSeenTransparencyScreen = true
 
     var body: some View {
         NavigationStack {
@@ -33,6 +32,55 @@ struct SettingsView: View {
 
                 // ── 1. Account ─────────────────────────────────────────
                 Section {
+
+                    if GuestManager.shared.isGuestMode {
+                        // ── Guest mode: simple sign-up prompt ─────────────
+                        HStack(spacing: 16) {
+                            ZStack {
+                                Circle()
+                                    .fill(Color(.systemGray4))
+                                    .frame(width: 56, height: 56)
+                                Image(systemName: "person.crop.circle.badge.questionmark")
+                                    .font(.title2)
+                                    .foregroundColor(.secondary)
+                            }
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Guest")
+                                    .font(.headline)
+                                Text("Create an account to save your progress")
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                        .padding(.vertical, 4)
+
+                        Button {
+                            dismiss()
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                GuestManager.shared.exitGuestMode()
+                            }
+                        } label: {
+                            HStack {
+                                Label("Create Free Account", systemImage: "person.crop.circle.badge.plus")
+                                    .foregroundStyle(Theme.Colors.primary)
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+
+                        Button {
+                            dismiss()
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                GuestManager.shared.exitGuestMode()
+                            }
+                        } label: {
+                            Label("Sign In", systemImage: "person.crop.circle")
+                        }
+
+                    } else {
+                    // ── Signed-in user: full account section ──────────────
 
                     // Profile row
                     HStack(spacing: 16) {
@@ -70,7 +118,7 @@ struct SettingsView: View {
                         UsageStatsView()
                     } label: {
                         HStack {
-                            Label("Monthly Starter Pack", systemImage: "chart.bar.fill")
+                            Label("Usage", systemImage: "chart.bar.fill")
                             Spacer()
                             if !storeManager.isPro {
                                 Text("Free")
@@ -98,7 +146,7 @@ struct SettingsView: View {
                     } else {
                         Button { showPaywall = true } label: {
                             HStack {
-                                Label("Upgrade to Pro", systemImage: "crown.fill")
+                                Label("Buy Credits or Upgrade to Pro", systemImage: "crown.fill")
                                     .foregroundStyle(
                                         LinearGradient(
                                             colors: [.yellow, .orange],
@@ -128,13 +176,10 @@ struct SettingsView: View {
                         Label("Delete Account", systemImage: "person.crop.circle.badge.minus")
                     }
 
+                    } // end else (signed-in)
+
                 } header: {
                     Text("Account")
-                } footer: {
-                    if !storeManager.isPro {
-                        Text("Pro unlocks unlimited summaries, character analyses and chats every month.")
-                            .font(.footnote)
-                    }
                 }
 
                 // ── 2. About ───────────────────────────────────────────
@@ -144,7 +189,6 @@ struct SettingsView: View {
                     Button {
                         dismiss()
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
-                            hasSeenTransparencyScreen = false
                             hasCompletedOnboarding = false
                         }
                     } label: {

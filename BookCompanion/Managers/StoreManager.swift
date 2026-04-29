@@ -35,6 +35,17 @@ final class StoreManager: ObservableObject {
     @Published private(set) var offerings: Offerings?
     @Published var purchaseError: String?
     @Published var isPurchasing: Bool = false
+    @Published var topupProduct: StoreProduct? = nil
+    @Published var isTopupPurchasing: Bool = false
+    @Published var topupPurchaseSucceeded: Bool = false
+
+    // ── Top-up credit counts ──────────────────────────────────────────────────
+    // Fetched from /api/usage/stats when PaywallView appears or after a purchase.
+    // Also updated in real-time from the SSE done event in SummaryViewModel.
+    // These never reset on the 1st — they persist until consumed.
+    @Published var topupSummaryCredits:   Int = 0
+    @Published var topupCharacterCredits: Int = 0
+    @Published var topupChatCredits:      Int = 0
 
     private init() {}
 
@@ -96,6 +107,73 @@ final class StoreManager: ObservableObject {
             offerings = try await Purchases.shared.offerings()
         } catch {
             print("❌ RC offerings error: \(error)")
+        }
+    }
+
+    // MARK: - Load Top-Up Product
+
+    func loadTopupProduct() async {
+        await withCheckedContinuation { continuation in
+            Purchases.shared.getProducts(["com.vivanLabs.BookCompanion.topup.pack"]) { products in
+                Task { @MainActor in
+                    self.topupProduct = products.first
+                }
+                continuation.resume()
+            }
+        }
+    }
+
+    // MARK: - Fetch Top-Up Credit Counts
+    // Called when PaywallView appears and after a successful top-up purchase.
+    // Reads from /api/usage/stats which returns all three credit fields.
+    // Also called by UsageStatsViewModel.loadUsage() to keep counts fresh.
+
+    func fetchTopupCredits() async {
+        guard let token = KeychainManager.shared.getUserToken() else { return }
+        guard let url = URL(string: "\(Config.apiEndpoint)/api/usage/stats") else { return }
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        do {
+            let (data, _) = try await URLSession.shared.data(for: request)
+            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                topupSummaryCredits   = json["topup_summary_credits"]   as? Int ?? 0
+                topupCharacterCredits = json["topup_character_credits"] as? Int ?? 0
+                topupChatCredits      = json["topup_chat_credits"]      as? Int ?? 0
+            }
+        } catch {
+            print("⚠️ fetchTopupCredits failed: \(error)")
+        }
+    }
+
+    // MARK: - Purchase Top-Up
+    // Consumables use purchase(product:) not purchase(package:).
+    // They do not grant entitlements — the NON_SUBSCRIPTION_PURCHASE
+    // webhook fires and our backend grants the credits.
+
+    func purchaseTopup() async -> Bool {
+        guard let product = topupProduct else {
+            purchaseError = "Top-up pack unavailable. Please try again."
+            return false
+        }
+        isTopupPurchasing = true
+        purchaseError = nil
+        do {
+            let (_, _, cancelled) = try await Purchases.shared.purchase(product: product)
+            isTopupPurchasing = false
+            if !cancelled {
+                topupPurchaseSucceeded = true
+                // Refresh credit counts from server after purchase
+                await fetchTopupCredits()
+                // Reset flag after brief delay so views can observe the change
+                try? await Task.sleep(nanoseconds: 3_000_000_000)
+                topupPurchaseSucceeded = false
+            }
+            return !cancelled
+        } catch {
+            isTopupPurchasing = false
+            purchaseError = error.localizedDescription
+            return false
         }
     }
 

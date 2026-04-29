@@ -103,6 +103,8 @@ struct SummaryView: View {
                     errorView(error)
                 } else if let summary = viewModel.summary {
                     summaryContent(summary.content)
+                } else {
+                    emptyState
                 }
             }
 
@@ -140,19 +142,42 @@ struct SummaryView: View {
         .task(id: chapter) {
             await viewModel.generate(chapter: chapter)
         }
+        
         .sheet(isPresented: $showingShareSheet) {
             if let summary = viewModel.summary {
                 ShareSheet(items: [formatSummaryForSharing(summary)])
             }
         }
         .sheet(isPresented: $viewModel.showPaywall) {
-                    PaywallView(triggerReason: viewModel.paywallTriggerReason)
-                        .environmentObject(storeManager)
-                }
-                .sheet(isPresented: $showPaywall) {
-                    PaywallView(triggerReason: "Upgrade to Pro for unlimited summaries.")
-                        .environmentObject(storeManager)
-                }
+            if GuestManager.shared.isGuestMode {
+                GuestLimitView(
+                    featureType: .summary,
+                    onCreateAccount: {
+                        viewModel.showPaywall = false
+                        GuestManager.shared.exitGuestMode()
+                    },
+                    onDismiss: { viewModel.showPaywall = false }
+                )
+            } else {
+                PaywallView(triggerReason: viewModel.paywallTriggerReason)
+                    .environmentObject(storeManager)
+            }
+        }
+        .sheet(isPresented: $showPaywall) {
+            if GuestManager.shared.isGuestMode {
+                GuestLimitView(
+                    featureType: .summary,
+                    onCreateAccount: {
+                        showPaywall = false
+                        GuestManager.shared.exitGuestMode()
+                    },
+                    onDismiss: { showPaywall = false }
+                )
+            } else {
+                PaywallView(triggerReason: "Upgrade to Pro for unlimited summaries.")
+                    .environmentObject(storeManager)
+            }
+        }
     }
 
     // MARK: - Vani Active Check
@@ -255,6 +280,41 @@ struct SummaryView: View {
             }
             .buttonStyle(.borderedProminent)
             .tint(Theme.Colors.primary)
+            Spacer()
+        }
+        .padding()
+    }
+    
+    // MARK: - Empty State
+    // Shown when summary is nil and not loading — e.g. after paywall dismisses
+    // post-purchase, or if generation was interrupted mid-navigation.
+
+    private var emptyState: some View {
+        VStack(spacing: 20) {
+            Spacer()
+            Image(systemName: "book.closed")
+                .font(.system(size: 52))
+                .foregroundStyle(Theme.Colors.primary.opacity(0.4))
+            VStack(spacing: 8) {
+                Text("Ready to generate")
+                    .font(.headline)
+                    .foregroundColor(.primary)
+                Text("Tap below to create your summary")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+            }
+            Button {
+                Task { await viewModel.generate(chapter: chapter) }
+            } label: {
+                Label("Generate Summary", systemImage: "sparkles")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(Theme.Colors.primary)
+                    .cornerRadius(Theme.CornerRadius.xl)
+            }
+            .padding(.horizontal, 32)
             Spacer()
         }
         .padding()

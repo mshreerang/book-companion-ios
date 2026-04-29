@@ -134,12 +134,17 @@ class CharacterCardsViewModel: ObservableObject {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        
-        guard let userToken = KeychainManager.shared.getUserToken() else {
-            throw CharacterAPIError.unauthorized
+
+        // Auth: JWT for signed-in users, device hash for guests
+        if GuestManager.shared.isGuestMode {
+            request.setValue(GuestManager.shared.deviceHash, forHTTPHeaderField: "X-Device-Hash")
+        } else {
+            guard let userToken = KeychainManager.shared.getUserToken() else {
+                throw CharacterAPIError.unauthorized
+            }
+            request.setValue("Bearer \(userToken)", forHTTPHeaderField: "Authorization")
         }
-        request.setValue("Bearer \(userToken)", forHTTPHeaderField: "Authorization")
-        
+
         var body: [String: Any] = [
             "action": "getNames",
             "bookTitle": book.title,
@@ -185,11 +190,15 @@ class CharacterCardsViewModel: ObservableObject {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        
-        guard let userToken = KeychainManager.shared.getUserToken() else {
-            throw CharacterAPIError.unauthorized
+
+        if GuestManager.shared.isGuestMode {
+            request.setValue(GuestManager.shared.deviceHash, forHTTPHeaderField: "X-Device-Hash")
+        } else {
+            guard let userToken = KeychainManager.shared.getUserToken() else {
+                throw CharacterAPIError.unauthorized
+            }
+            request.setValue("Bearer \(userToken)", forHTTPHeaderField: "Authorization")
         }
-        request.setValue("Bearer \(userToken)", forHTTPHeaderField: "Authorization")
         
         var body: [String: Any] = [
             "action": "getDetails",
@@ -239,11 +248,17 @@ class CharacterCardsViewModel: ObservableObject {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        
-        guard let userToken = KeychainManager.shared.getUserToken() else {
-            throw CharacterAPIError.unauthorized
+
+        if GuestManager.shared.isGuestMode {
+            // Guests don't get prewarm — backend rejects it. But just in case,
+            // send the device hash so auth resolves rather than 401.
+            request.setValue(GuestManager.shared.deviceHash, forHTTPHeaderField: "X-Device-Hash")
+        } else {
+            guard let userToken = KeychainManager.shared.getUserToken() else {
+                throw CharacterAPIError.unauthorized
+            }
+            request.setValue("Bearer \(userToken)", forHTTPHeaderField: "Authorization")
         }
-        request.setValue("Bearer \(userToken)", forHTTPHeaderField: "Authorization")
         
         var body: [String: Any] = [
             "action": "prewarm",

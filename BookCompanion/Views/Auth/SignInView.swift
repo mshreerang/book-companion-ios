@@ -2,9 +2,8 @@
 //  SignInView.swift
 //  BookCompanion
 //
-//  Updated by Shree on 06/03/2026.
-//  Updated: fixed misleading privacy footer copy, vertically centred
-//           layout, updated brand colours to indigo/teal.
+//  Redesigned: icon-based auth buttons, prominent guest mode,
+//  clean minimal layout.
 //
 
 import SwiftUI
@@ -24,16 +23,13 @@ struct SignInView: View {
     @State private var bannerStyle: BannerStyle = .success
 
     var body: some View {
-        // GeometryReader lets us vertically centre the content group
-        // regardless of whether email fields are expanded or not.
         GeometryReader { geo in
             ScrollView {
                 VStack(spacing: 0) {
-                    Spacer(minLength: geo.size.height * 0.1)
+                    Spacer(minLength: geo.size.height * 0.12)
 
                     // MARK: - Header
                     VStack(spacing: 16) {
-                        // Brand mark — consistent with Settings and Transparency screens
                         Image(systemName: "book.closed.fill")
                             .font(.system(size: 68))
                             .foregroundStyle(Theme.Colors.brandGradientDiagonal)
@@ -42,60 +38,67 @@ struct SignInView: View {
                             Text("BookCompanion")
                                 .font(.system(size: 30, weight: .bold))
 
-                            Text("Your AI-powered reading companion")
+                            Text("Your reading companion")
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                         }
                     }
-                    .padding(.bottom, 48)
+                    .padding(.bottom, 44)
 
-                    // MARK: - Auth buttons
-                    VStack(spacing: 12) {
+                    // MARK: - Auth icons row
+                    VStack(spacing: 14) {
 
-                        if authManager.isLoading && !showEmailFields {
-                            ProgressView()
-                                .scaleEffect(1.2)
-                                .frame(height: 50)
-                        } else {
-                            SignInWithAppleButton(authManager: authManager)
-                        }
-
-                        // Divider
-                        HStack {
-                            Rectangle()
-                                .fill(Color.secondary.opacity(0.25))
-                                .frame(height: 0.5)
-                            Text("or")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                                .padding(.horizontal, 10)
-                            Rectangle()
-                                .fill(Color.secondary.opacity(0.25))
-                                .frame(height: 0.5)
-                        }
-
-                        // Email section
                         if showEmailFields {
+                            // ── Expanded email fields ─────────────────────
                             emailSignInFields
                                 .transition(.move(edge: .top).combined(with: .opacity))
+                                .padding(.horizontal, 32)
                         } else {
-                            Button {
-                                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                                    showEmailFields = true
+                            // ── Icon buttons row ─────────────────────────
+                            HStack(spacing: 24) {
+
+                                // Apple
+                                Button {
+                                    if !authManager.isLoading {
+                                        authManager.signInWithApple()
+                                    }
+                                } label: {
+                                    ZStack {
+                                        Circle()
+                                            .fill(Color.black)
+                                            .frame(width: 60, height: 60)
+                                        if authManager.isLoading {
+                                            ProgressView()
+                                                .tint(.white)
+                                        } else {
+                                            Image(systemName: "applelogo")
+                                                .font(.system(size: 26))
+                                                .foregroundColor(.white)
+                                        }
+                                    }
                                 }
-                            } label: {
-                                HStack {
-                                    Image(systemName: "envelope")
-                                        .font(.title3)
-                                    Text("Continue with Email")
-                                        .font(.headline)
+                                .disabled(authManager.isLoading)
+
+                                // Email
+                                Button {
+                                    withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                                        showEmailFields = true
+                                    }
+                                } label: {
+                                    ZStack {
+                                        Circle()
+                                            .fill(Color(.systemGray5))
+                                            .frame(width: 60, height: 60)
+                                        Image(systemName: "envelope.fill")
+                                            .font(.system(size: 24))
+                                            .foregroundColor(.primary)
+                                    }
                                 }
-                                .foregroundColor(.primary)
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 50)
-                                .background(Color(.systemGray6))
-                                .cornerRadius(Theme.CornerRadius.lg)
                             }
+
+                            Text("Sign in with Apple or Email")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
                         }
 
                         // Error
@@ -108,34 +111,71 @@ struct SignInView: View {
                                     .foregroundColor(.red)
                                     .multilineTextAlignment(.leading)
                             }
-                            .padding(.horizontal, 4)
+                            .padding(.horizontal, 32)
                             .padding(.top, 4)
                         }
 
-                        // Create account
-                        Button { showCreateAccount = true } label: {
-                            HStack(spacing: 4) {
-                                Text("New here?")
-                                    .foregroundColor(.secondary)
-                                Text("Create an account")
-                                    .foregroundColor(Theme.Colors.primary)
-                                    .fontWeight(.medium)
+                        // Create account — only shown when email fields are expanded
+                        if showEmailFields {
+                            Button { showCreateAccount = true } label: {
+                                HStack(spacing: 4) {
+                                    Text("New here?")
+                                        .foregroundColor(.secondary)
+                                    Text("Create an account")
+                                        .foregroundColor(Theme.Colors.primary)
+                                        .fontWeight(.medium)
+                                }
+                                .font(.subheadline)
                             }
-                            .font(.subheadline)
+                            .padding(.top, 4)
                         }
-                        .padding(.top, 6)
                     }
-                    .padding(.horizontal, 32)
+
+                    // MARK: - Guest mode button
+                    VStack(spacing: 8) {
+                        HStack {
+                            Rectangle()
+                                .fill(Color.secondary.opacity(0.2))
+                                .frame(height: 0.5)
+                            Text("or")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .padding(.horizontal, 10)
+                            Rectangle()
+                                .fill(Color.secondary.opacity(0.2))
+                                .frame(height: 0.5)
+                        }
+                        .padding(.horizontal, 40)
+
+                        Button {
+                            HapticManager.lightImpact()
+                            GuestManager.shared.enterGuestMode()
+                        } label: {
+                            HStack(spacing: 8) {
+                                Image(systemName: "book.closed")
+                                    .font(.system(size: 15))
+                                Text("Try it first — no account needed")
+                                    .font(.subheadline.weight(.medium))
+                            }
+                            .foregroundColor(Theme.Colors.primary)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 46)
+                            .background(
+                                RoundedRectangle(cornerRadius: Theme.CornerRadius.lg)
+                                    .stroke(Theme.Colors.primary.opacity(0.3), lineWidth: 1)
+                            )
+                        }
+                        .padding(.horizontal, 32)
+                    }
+                    .padding(.top, 24)
 
                     // MARK: - Footer
-                    // Updated: removed misleading Apple-only privacy claim.
-                    // Both sign-in methods protect your privacy equally.
                     Text("Your data is protected however you sign in.")
                         .font(.caption2)
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 40)
-                        .padding(.top, 32)
+                        .padding(.top, 28)
 
                     Spacer(minLength: geo.size.height * 0.1)
                 }
@@ -173,15 +213,35 @@ struct SignInView: View {
                 bannerMessage = "Password updated. Please sign in."
                 deepLinkManager.consume()
             case .search:
-                break // handled in BookSearchView
+                break
             }
         }
-        }
+    }
 
     // MARK: - Email sign-in fields
 
     private var emailSignInFields: some View {
         VStack(spacing: 12) {
+
+            // Back button to return to icon row
+            Button {
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                    showEmailFields = false
+                    email = ""
+                    password = ""
+                    authManager.error = nil
+                }
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: "chevron.left")
+                        .font(.caption.bold())
+                    Text("Back")
+                        .font(.subheadline)
+                }
+                .foregroundColor(Theme.Colors.primary)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
             VStack(spacing: 8) {
                 TextField("Email", text: $email)
                     .keyboardType(.emailAddress)

@@ -28,6 +28,8 @@ private struct ChatStreamEvent {
     struct QuotaState {
         let used: Int
         let limit: Int
+        let usingTopup: Bool
+        let topupCredits: Int
     }
 
     // Manual JSON decoding — avoids Codable synthesis issues with nested
@@ -43,7 +45,12 @@ private struct ChatStreamEvent {
         if let q = json["quota"] as? [String: Any],
            let qUsed  = q["used"]  as? Int,
            let qLimit = q["limit"] as? Int {
-            self.quota = QuotaState(used: qUsed, limit: qLimit)
+            self.quota = QuotaState(
+                used:         qUsed,
+                limit:        qLimit,
+                usingTopup:   q["usingTopup"]   as? Bool ?? false,
+                topupCredits: q["topupCredits"] as? Int  ?? 0
+            )
         } else {
             self.quota = nil
         }
@@ -206,11 +213,16 @@ final class CharacterChatViewModel: ObservableObject {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.timeoutInterval = Config.chatTimeoutSeconds
 
-        guard let userToken = KeychainManager.shared.getUserToken() else {
-            handleNetworkError("Not signed in")
-            return
+        // Auth: JWT for signed-in users, device hash for guests
+        if GuestManager.shared.isGuestMode {
+            request.setValue(GuestManager.shared.deviceHash, forHTTPHeaderField: "X-Device-Hash")
+        } else {
+            guard let userToken = KeychainManager.shared.getUserToken() else {
+                handleNetworkError("Not signed in")
+                return
+            }
+            request.setValue("Bearer \(userToken)", forHTTPHeaderField: "Authorization")
         }
-        request.setValue("Bearer \(userToken)", forHTTPHeaderField: "Authorization")
 
         // API payload — mirrors the structure specified in the PRD §11 backend spec
         let body: [String: Any] = [
@@ -357,10 +369,24 @@ final class CharacterChatViewModel: ObservableObject {
         // that no more chunks are coming so it can finalise when drained.
         case "done":
             networkStreamDone = true
+            // Guest mode: increment local guest usage cache
+            if GuestManager.shared.isGuestMode {
+                GuestManager.shared.increment(type: "chat")
+            }
             // Update quota counter if backend returned it (free users only)
             if let q = event.quota {
-                quotaUsed = q.used
-                quotaLimit = q.limit
+                if q.usingTopup {
+                    // User is consuming top-up credits — show remaining top-up count
+                    // instead of the per-character monthly count (which is already at 5)
+                    quotaUsed  = q.limit - q.topupCredits  // visual: credits consumed
+                    quotaLimit = q.limit
+                    // Push updated top-up chat count into StoreManager so
+                    // CreditCounterBar on ProgressInputView reflects live value
+                    StoreManager.shared.topupChatCredits = q.topupCredits
+                } else {
+                    quotaUsed  = q.used
+                    quotaLimit = q.limit
+                }
             }
 
             let latency = Date().timeIntervalSince(startTime)

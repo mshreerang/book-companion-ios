@@ -40,12 +40,17 @@ struct BookSearchView: View {
     }
 
     private var filteredBooks: [Book] {
-        guard !viewModel.searchText.isEmpty else { return viewModel.books }
-        return viewModel.books.filter {
-            $0.title.localizedCaseInsensitiveContains(viewModel.searchText) ||
-            $0.author.localizedCaseInsensitiveContains(viewModel.searchText)
+            let sorted = viewModel.books.sorted {
+                let aDate = $0.readingProgress?.updatedAt ?? $0.createdAt
+                let bDate = $1.readingProgress?.updatedAt ?? $1.createdAt
+                return aDate > bDate
+            }
+            guard !viewModel.searchText.isEmpty else { return sorted }
+            return sorted.filter {
+                $0.title.localizedCaseInsensitiveContains(viewModel.searchText) ||
+                $0.author.localizedCaseInsensitiveContains(viewModel.searchText)
+            }
         }
-    }
 
     // MARK: - Body
 
@@ -73,7 +78,7 @@ struct BookSearchView: View {
                     showingSettings = true
                     AnalyticsManager.shared.track(event: "settings_opened")
                 } label: {
-                    Image(systemName: "gear")
+                    Image(systemName: "gearshape")
                         .font(.system(size: 16, weight: .medium))
                 }
                 .accessibleButton(
@@ -129,6 +134,7 @@ struct BookSearchView: View {
                     NavigationLink {
                         ProgressInputView(
                             viewModel: makeProgressViewModel(book),
+                            settingsManager: settingsManager,
                             makeSummaryViewModel: makeSummaryViewModel,
                             makeCharactersViewModel: makeCharactersViewModel
                         )
