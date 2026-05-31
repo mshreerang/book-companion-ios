@@ -65,15 +65,15 @@ struct SignInView: View {
                                 } label: {
                                     ZStack {
                                         Circle()
-                                            .fill(Color.black)
+                                            .fill(Color(UIColor.label))
                                             .frame(width: 60, height: 60)
                                         if authManager.isLoading {
                                             ProgressView()
-                                                .tint(.white)
+                                                .tint(Color(UIColor.systemBackground))
                                         } else {
                                             Image(systemName: "applelogo")
                                                 .font(.system(size: 26))
-                                                .foregroundColor(.white)
+                                                .foregroundColor(Color(UIColor.systemBackground))
                                         }
                                     }
                                 }

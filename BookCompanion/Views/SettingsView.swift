@@ -102,7 +102,7 @@ struct SettingsView: View {
                                         .foregroundStyle(.white)
                                         .padding(.horizontal, 6)
                                         .padding(.vertical, 2)
-                                        .background(Color.orange)
+                                        .background(Theme.Colors.warning)
                                         .cornerRadius(Theme.CornerRadius.sm)
                                 }
                             }

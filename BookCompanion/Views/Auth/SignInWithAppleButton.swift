@@ -23,10 +23,10 @@ struct SignInWithAppleButton: View {
                 Text("Sign in with Apple")
                     .font(.headline)
             }
-            .foregroundColor(.white)
+            .foregroundColor(Color(UIColor.systemBackground))
             .frame(maxWidth: .infinity)
             .frame(height: 50)
-            .background(Color.black)
+            .background(Color(UIColor.label))
             .cornerRadius(12)
         }
         .disabled(authManager.isLoading)

@@ -45,7 +45,7 @@ struct UsageStatsView: View {
                         } else {
                             ZStack {
                                 Circle()
-                                    .stroke(Color.gray.opacity(0.2), lineWidth: 8)
+                                    .stroke(Color(.systemGray5), lineWidth: 8)
                                     .frame(width: 60, height: 60)
                                 
                                 Circle()
@@ -126,7 +126,7 @@ struct UsageStatsView: View {
             Section {
                 HStack {
                     Image(systemName: viewModel.isPro ? "crown.fill" : "person.fill")
-                        .foregroundColor(viewModel.isPro ? .yellow : .gray)
+                        .foregroundColor(viewModel.isPro ? .yellow : Color(.systemGray3))
                     
                     Text(viewModel.isPro ? "Pro" : "Free")
                         .font(.headline)

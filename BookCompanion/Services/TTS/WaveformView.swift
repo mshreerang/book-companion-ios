@@ -89,9 +89,9 @@ struct WaveformView: View {
         case .paused, .ready:
             return Color.accentColor.opacity(0.5)
         case .downloading:
-            return Color.gray.opacity(0.3)
+            return Color(.systemGray3).opacity(0.6)
         default:
-            return Color.gray.opacity(0.2)
+            return Color(.systemGray4).opacity(0.5)
         }
     }
 

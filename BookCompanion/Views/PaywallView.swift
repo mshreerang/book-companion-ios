@@ -540,7 +540,7 @@ struct ProSuccessOverlay: View {
                         .foregroundStyle(.yellow)
                         .padding(.horizontal, 16)
                         .padding(.vertical, 8)
-                        .background(Color.yellow.opacity(0.15))
+                        .background(Color.yellow.opacity(0.25))
                         .cornerRadius(20)
                 }
             }

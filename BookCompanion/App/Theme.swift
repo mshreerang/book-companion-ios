@@ -90,7 +90,11 @@ enum Theme {
         static let textPrimary         = Color.primary
         static let textSecondary       = Color.secondary
         static let background          = Color(UIColor.systemBackground)
-        static let pagedBackground     = Color(red: 0.949, green: 0.941, blue: 0.914) // #F2F0E9 linen cream
+        static let pagedBackground     = Color(UIColor { tc in
+            tc.userInterfaceStyle == .dark
+                ? UIColor(red: 0.15, green: 0.14, blue: 0.13, alpha: 1) // dark linen
+                : UIColor(red: 0.949, green: 0.941, blue: 0.914, alpha: 1) // #F2F0E9 light linen
+        })
         static let secondaryBackground = Color(UIColor.secondarySystemBackground)
 
         // ── Shadow tint ────────────────────────────────────────────────

@@ -1,6 +1,7 @@
 import Foundation
 import SwiftUI
 import Combine
+import StoreKit
 
 @MainActor
 class SummaryViewModel: ObservableObject {
@@ -355,9 +356,21 @@ class SummaryViewModel: ObservableObject {
                                 "generation_time_seconds": generationTime,
                                 "content_length": summary.content.count
                             ]
+                            
                         )
                         
                         print("✅ Summary streaming complete!")
+                        // Request App Store review after 2nd successful summary
+                        let summaryCount = UserDefaults.standard.integer(forKey: "totalSummariesGenerated") + 1
+                        UserDefaults.standard.set(summaryCount, forKey: "totalSummariesGenerated")
+                        if summaryCount == 2 {
+                            Task { @MainActor in
+                                if let windowScene = UIApplication.shared.connectedScenes
+                                    .first as? UIWindowScene {
+                                    AppStore.requestReview(in: windowScene)
+                                }
+                            }
+                        }
                         
                     default:
                         break

@@ -175,12 +175,12 @@ struct BookSearchResultRow: View {
 
     private var placeholderImage: some View {
         Rectangle()
-            .fill(Color.gray.opacity(0.2))
+            .fill(Color(.systemGray5))
             .frame(width: 50, height: 75)
             .cornerRadius(Theme.CornerRadius.xs)
             .overlay {
                 Image(systemName: "book.closed")
-                    .foregroundColor(.gray)
+                    .foregroundColor(.secondary)
                     .font(.title3)
             }
     }
@@ -400,11 +400,11 @@ struct ConfirmBookView: View {
 
     private var placeholderImage: some View {
         Rectangle()
-            .fill(Color.gray.opacity(0.2))
+            .fill(Color(.systemGray5))
             .cornerRadius(Theme.CornerRadius.sm)
             .overlay {
                 Image(systemName: "book.closed")
-                    .foregroundColor(.gray)
+                    .foregroundColor(.secondary)
                     .font(.largeTitle)
             }
     }

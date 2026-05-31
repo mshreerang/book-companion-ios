@@ -8,11 +8,11 @@
 
 /* Begin PBXBuildFile section */
 		F40CF3982F544E4D00DFAD3A /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F40CF3972F544E4D00DFAD3A /* StoreKit.framework */; };
-		F47449222F709D5600A5F3D1 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = F47449212F709D5600A5F3D1 /* RevenueCat */; };
-		F47449242F709D5600A5F3D1 /* RevenueCatUI in Frameworks */ = {isa = PBXBuildFile; productRef = F47449232F709D5600A5F3D1 /* RevenueCatUI */; };
-		F47449272F709D6700A5F3D1 /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = F47449262F709D6700A5F3D1 /* Sentry */; };
-		F474492A2F709D7B00A5F3D1 /* PostHog in Frameworks */ = {isa = PBXBuildFile; productRef = F47449292F709D7B00A5F3D1 /* PostHog */; };
-		F474492D2F709D8C00A5F3D1 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = F474492C2F709D8C00A5F3D1 /* Supabase */; };
+		F45EDF2E2FB8FAC500F1BB05 /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = F45EDF2D2FB8FAC500F1BB05 /* Sentry */; };
+		F45EDF312FB8FAD300F1BB05 /* PostHog in Frameworks */ = {isa = PBXBuildFile; productRef = F45EDF302FB8FAD300F1BB05 /* PostHog */; };
+		F45EDF392FB8FAF700F1BB05 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = F45EDF382FB8FAF700F1BB05 /* Supabase */; };
+		F45EDF3C2FB8FB2E00F1BB05 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = F45EDF3B2FB8FB2E00F1BB05 /* RevenueCat */; };
+		F45EDF3E2FB8FB2E00F1BB05 /* RevenueCatUI in Frameworks */ = {isa = PBXBuildFile; productRef = F45EDF3D2FB8FB2E00F1BB05 /* RevenueCatUI */; };
 		F4BB54902F4E663600391D3F /* (null) in Frameworks */ = {isa = PBXBuildFile; };
 		F4BB54912F4E663600391D3F /* (null) in Frameworks */ = {isa = PBXBuildFile; };
 /* End PBXBuildFile section */
@@ -78,12 +78,12 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				F47449222F709D5600A5F3D1 /* RevenueCat in Frameworks */,
+				F45EDF312FB8FAD300F1BB05 /* PostHog in Frameworks */,
+				F45EDF392FB8FAF700F1BB05 /* Supabase in Frameworks */,
+				F45EDF3E2FB8FB2E00F1BB05 /* RevenueCatUI in Frameworks */,
+				F45EDF3C2FB8FB2E00F1BB05 /* RevenueCat in Frameworks */,
 				F40CF3982F544E4D00DFAD3A /* StoreKit.framework in Frameworks */,
-				F474492D2F709D8C00A5F3D1 /* Supabase in Frameworks */,
-				F474492A2F709D7B00A5F3D1 /* PostHog in Frameworks */,
-				F47449242F709D5600A5F3D1 /* RevenueCatUI in Frameworks */,
-				F47449272F709D6700A5F3D1 /* Sentry in Frameworks */,
+				F45EDF2E2FB8FAC500F1BB05 /* Sentry in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -156,11 +156,11 @@
 			);
 			name = BookCompanion;
 			packageProductDependencies = (
-				F47449212F709D5600A5F3D1 /* RevenueCat */,
-				F47449232F709D5600A5F3D1 /* RevenueCatUI */,
-				F47449262F709D6700A5F3D1 /* Sentry */,
-				F47449292F709D7B00A5F3D1 /* PostHog */,
-				F474492C2F709D8C00A5F3D1 /* Supabase */,
+				F45EDF2D2FB8FAC500F1BB05 /* Sentry */,
+				F45EDF302FB8FAD300F1BB05 /* PostHog */,
+				F45EDF382FB8FAF700F1BB05 /* Supabase */,
+				F45EDF3B2FB8FB2E00F1BB05 /* RevenueCat */,
+				F45EDF3D2FB8FB2E00F1BB05 /* RevenueCatUI */,
 			);
 			productName = BookCompanion;
 			productReference = F49C0F9A2F1D94BE00B17BBE /* BookCompanion.app */;
@@ -246,10 +246,10 @@
 			mainGroup = F49C0F912F1D94BE00B17BBE;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				F47449202F709D5600A5F3D1 /* XCRemoteSwiftPackageReference "purchases-ios" */,
-				F47449252F709D6700A5F3D1 /* XCRemoteSwiftPackageReference "sentry-cocoa" */,
-				F47449282F709D7B00A5F3D1 /* XCRemoteSwiftPackageReference "posthog-ios" */,
-				F474492B2F709D8C00A5F3D1 /* XCRemoteSwiftPackageReference "supabase-swift" */,
+				F45EDF2C2FB8FAC500F1BB05 /* XCRemoteSwiftPackageReference "sentry-cocoa" */,
+				F45EDF2F2FB8FAD300F1BB05 /* XCRemoteSwiftPackageReference "posthog-ios" */,
+				F45EDF372FB8FAF700F1BB05 /* XCRemoteSwiftPackageReference "supabase-swift" */,
+				F45EDF3A2FB8FB2E00F1BB05 /* XCRemoteSwiftPackageReference "purchases-ios" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = F49C0F9B2F1D94BE00B17BBE /* Products */;
@@ -471,7 +471,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = BookCompanion/BookCompanion.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 5;
 				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = JC8RCB5995;
@@ -491,11 +491,11 @@
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphoneos*]" = UIStatusBarStyleDefault;
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait";
-				IPHONEOS_DEPLOYMENT_TARGET = 26.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 26.1;
-				MARKETING_VERSION = 1.3.2;
+				MARKETING_VERSION = 1.4.4;
 				PRODUCT_BUNDLE_IDENTIFIER = ViVa.BookCompanion;
 				"PRODUCT_BUNDLE_IDENTIFIER[sdk=iphoneos*]" = com.ViVa.BookCompanion;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -521,7 +521,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = BookCompanion/BookCompanion.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 5;
 				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = JC8RCB5995;
@@ -541,11 +541,11 @@
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphoneos*]" = UIStatusBarStyleDefault;
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait";
-				IPHONEOS_DEPLOYMENT_TARGET = 26.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 26.1;
-				MARKETING_VERSION = 1.3.2;
+				MARKETING_VERSION = 1.4.4;
 				PRODUCT_BUNDLE_IDENTIFIER = ViVa.BookCompanion;
 				"PRODUCT_BUNDLE_IDENTIFIER[sdk=iphoneos*]" = com.ViVa.BookCompanion;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -715,31 +715,25 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		F47449202F709D5600A5F3D1 /* XCRemoteSwiftPackageReference "purchases-ios" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/RevenueCat/purchases-ios";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 5.66.0;
-			};
-		};
-		F47449252F709D6700A5F3D1 /* XCRemoteSwiftPackageReference "sentry-cocoa" */ = {
+		F45EDF2C2FB8FAC500F1BB05 /* XCRemoteSwiftPackageReference "sentry-cocoa" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/getsentry/sentry-cocoa";
 			requirement = {
 				kind = upToNextMajorVersion;
-				minimumVersion = 9.8.0;
+				minimumVersion = 9.13.0;
 			};
+			traits = (
+			);
 		};
-		F47449282F709D7B00A5F3D1 /* XCRemoteSwiftPackageReference "posthog-ios" */ = {
+		F45EDF2F2FB8FAD300F1BB05 /* XCRemoteSwiftPackageReference "posthog-ios" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/PostHog/posthog-ios";
 			requirement = {
 				kind = upToNextMajorVersion;
-				minimumVersion = 3.48.0;
+				minimumVersion = 3.58.3;
 			};
 		};
-		F474492B2F709D8C00A5F3D1 /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
+		F45EDF372FB8FAF700F1BB05 /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/supabase/supabase-swift";
 			requirement = {
@@ -747,33 +741,41 @@
 				minimumVersion = 2.5.1;
 			};
 		};
+		F45EDF3A2FB8FB2E00F1BB05 /* XCRemoteSwiftPackageReference "purchases-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/RevenueCat/purchases-ios";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 5.73.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		F47449212F709D5600A5F3D1 /* RevenueCat */ = {
+		F45EDF2D2FB8FAC500F1BB05 /* Sentry */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = F47449202F709D5600A5F3D1 /* XCRemoteSwiftPackageReference "purchases-ios" */;
-			productName = RevenueCat;
-		};
-		F47449232F709D5600A5F3D1 /* RevenueCatUI */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = F47449202F709D5600A5F3D1 /* XCRemoteSwiftPackageReference "purchases-ios" */;
-			productName = RevenueCatUI;
-		};
-		F47449262F709D6700A5F3D1 /* Sentry */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = F47449252F709D6700A5F3D1 /* XCRemoteSwiftPackageReference "sentry-cocoa" */;
+			package = F45EDF2C2FB8FAC500F1BB05 /* XCRemoteSwiftPackageReference "sentry-cocoa" */;
 			productName = Sentry;
 		};
-		F47449292F709D7B00A5F3D1 /* PostHog */ = {
+		F45EDF302FB8FAD300F1BB05 /* PostHog */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = F47449282F709D7B00A5F3D1 /* XCRemoteSwiftPackageReference "posthog-ios" */;
+			package = F45EDF2F2FB8FAD300F1BB05 /* XCRemoteSwiftPackageReference "posthog-ios" */;
 			productName = PostHog;
 		};
-		F474492C2F709D8C00A5F3D1 /* Supabase */ = {
+		F45EDF382FB8FAF700F1BB05 /* Supabase */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = F474492B2F709D8C00A5F3D1 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			package = F45EDF372FB8FAF700F1BB05 /* XCRemoteSwiftPackageReference "supabase-swift" */;
 			productName = Supabase;
+		};
+		F45EDF3B2FB8FB2E00F1BB05 /* RevenueCat */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F45EDF3A2FB8FB2E00F1BB05 /* XCRemoteSwiftPackageReference "purchases-ios" */;
+			productName = RevenueCat;
+		};
+		F45EDF3D2FB8FB2E00F1BB05 /* RevenueCatUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F45EDF3A2FB8FB2E00F1BB05 /* XCRemoteSwiftPackageReference "purchases-ios" */;
+			productName = RevenueCatUI;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

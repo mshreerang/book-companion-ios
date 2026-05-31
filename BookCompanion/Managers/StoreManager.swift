@@ -115,6 +115,7 @@ final class StoreManager: ObservableObject {
     func loadTopupProduct() async {
         await withCheckedContinuation { continuation in
             Purchases.shared.getProducts(["com.vivanLabs.BookCompanion.topup.pack"]) { products in
+               for p in products { print("🛒 product: \(p.productIdentifier) — \(p.localizedPriceString)") }
                 Task { @MainActor in
                     self.topupProduct = products.first
                 }

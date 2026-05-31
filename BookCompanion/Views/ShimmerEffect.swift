@@ -15,7 +15,11 @@ struct ShimmerEffect: ViewModifier {
                 LinearGradient(
                     gradient: Gradient(stops: [
                         .init(color: Color.clear, location: 0),
-                        .init(color: Color.white.opacity(0.3), location: 0.5),
+                        .init(color: Color(UIColor { tc in
+                            tc.userInterfaceStyle == .dark
+                                ? UIColor.white.withAlphaComponent(0.1)
+                                : UIColor.white.withAlphaComponent(0.45)
+                        }), location: 0.5),
                         .init(color: Color.clear, location: 1)
                     ]),
                     startPoint: .leading,
