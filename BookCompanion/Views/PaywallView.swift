@@ -350,7 +350,7 @@ struct PaywallView: View {
                      destination: URL(string: "https://mshreerang.github.io/book-companion-docs/privacy-policy.html")!)
                 Text("·").foregroundStyle(.secondary)
                 Link("Terms of Use",
-                     destination: URL(string: "https://mshreerang.github.io/book-companion-docs/terms-of-use.html")!)
+                     destination: URL(string: "https://mshreerang.github.io/book-companion-docs/terms-of-service.html")!)
             }
             .font(.caption2)
             .foregroundStyle(Theme.Colors.primary)
